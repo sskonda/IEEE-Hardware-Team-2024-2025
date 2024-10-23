@@ -140,17 +140,6 @@ python3 tests/test_camera_feed.py
 
 ---
 
-## Contributors  
-- **Sanat Konda** (Software Lead)  
-- IEEE Robotics Hardware Team  
-
----
-
-## License  
-This project is licensed under the MIT License. See `LICENSE` for more details.  
-
----
-
 ## References  
 - [AprilTag Library](https://april.eecs.umich.edu/software/apriltag)  
 - Raspberry Pi GPIO Documentation: https://gpiozero.readthedocs.io  

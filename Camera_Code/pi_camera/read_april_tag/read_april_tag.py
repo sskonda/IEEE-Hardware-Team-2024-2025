@@ -2,10 +2,13 @@ import cv2
 import apriltag
 import numpy
 
-def main():
+def Hello():
     print("Hello")
 
 # load in the image
+
+def readTag():
+    print("Hello")
 
 image = cv2.imread("testImage.jpg", cv2.IMREAD_GRAYSCALE)
 

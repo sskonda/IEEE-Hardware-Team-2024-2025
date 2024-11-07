@@ -1,10 +1,20 @@
-from picamera import PiCamera
-from time import sleep
+import cv2
 
 def read_Cam(file):
 
-    camera = PiCamera()
-    camera.start_preview(alpha= 192)
-    sleep(1)
-    camera.capture(file)
-    camera.stop-preview()
+    cam = cv2.VideoCapture(0) # could be 0 or -1, depends where it is plugged in
+
+    if not cam.isOpened():
+        print("Error: could not open camera.")
+        return
+    
+    ret, frame = cam.read()
+
+    if ret:
+
+        cv2.imwrite(file, frame)
+        print("Image Captured and Saved")
+    else:
+        print('Image capture failed')
+
+    cam.release()

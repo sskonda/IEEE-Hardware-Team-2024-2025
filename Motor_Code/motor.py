@@ -46,19 +46,22 @@ class DutyMotor():
             The desired duty cycle of the motor
         """
         if duty > 0:
-            self.forward_pwm.ChangeDutyCycle(duty)
+            self.forward_pwm.ChangeDutyCycle(100*duty)
             self.reverse_pwm.ChangeDutyCycle(0)
         elif duty < 0:
             self.forward_pwm.ChangeDutyCycle(0)
-            self.reverse_pwm.ChangeDutyCycle(-duty)
+            self.reverse_pwm.ChangeDutyCycle(100*-duty)
     
 
    
 if __name__ == "__main__":
     GPIO.setmode(GPIO.BCM)
+
     motor = DutyMotor(17, 18, None)
     motor.init()
+
     motor.set_duty(0.50)
     input("Press enter to stop")
     motor.set_duty(0)
+
     GPIO.cleanup()

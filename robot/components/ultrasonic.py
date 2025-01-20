@@ -1,0 +1,36 @@
+from . import Component
+
+from robot import PI
+import pigpio
+
+SPEED_OF_SOUND = 74.0525 * 2  # us / in (two-way)
+
+class Ultrasonic(Component):
+    def __init__(self, trigger_pin, echo_pin):
+        self._trigger_pin = trigger_pin
+        self._echo_pin = echo_pin
+
+        self._high_tick = None
+        self._period = None
+
+    def init(self):
+        PI.set_mode(self._trigger_pin, pigpio.OUTPUT)
+        PI.set_mode(self._echo_pin, pigpio.INPUT)
+
+        PI.callback(self._echo_pin, pigpio.EITHER_EDGE, self._echo_cbf)
+    
+    def ping(self):
+        PI.gpio_trigger(self._trigger_pin, 10, pigpio.HIGH)
+
+    def _echo_cbf(self, gpio, level, tick):
+        if level == pigpio.LOW:  # Falling edge
+            if self._high_tick is not None:
+                self._period = pigpio.tickDiff(self._high_tick, tick)
+                self._high_tick = None
+        if level == pigpio.HIGH:  # Rising edge.
+            self._high_tick = tick
+
+    def get_range(self):
+        if self._period is None:
+            return 0
+        return self._period / SPEED_OF_SOUND

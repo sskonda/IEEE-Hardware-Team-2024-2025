@@ -1,6 +1,7 @@
-from robot import PI
 from . import Component 
 from .encoder import Encoder
+
+from robot import PI
 import pigpio
 
 GEAR_RATIO = 12#:1
@@ -10,7 +11,7 @@ ENCODER_RESOLUTION = 64 * GEAR_RATIO
 
  
 class DutyMotor(Component):
-    def __init__(self, forward_pin, reverse_pin, encoder=None):
+    def __init__(self, forward_pin, reverse_pin, encoder: Encoder | None=None):
         self.forward_pin = forward_pin
         self.reverse_pin = reverse_pin
         self.encoder = encoder

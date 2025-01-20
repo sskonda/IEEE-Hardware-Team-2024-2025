@@ -1,12 +1,12 @@
-from robot.components import DutyMotor
+from robot.components import ServoMotor
 
 def main():
-    motor = DutyMotor(17, 18)
+    motor = ServoMotor(17)
     motor.init()
 
     try:
         while True:
-            motor.set_duty(float(input("Duty Cyle: ")))
+            motor.set_position(float(input("Position: ")))
     except KeyboardInterrupt:
         pass
 

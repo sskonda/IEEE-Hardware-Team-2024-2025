@@ -1,9 +1,8 @@
-from robot import PI
 from . import Component
+
+from robot import PI
 import pigpio
 
-from collections import deque
-import threading
 
 class Encoder(Component):
     def init(self):

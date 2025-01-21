@@ -1,14 +1,14 @@
 #!/bin/python3
 
-from robot.components import BrushedMotor
+from robot.components import StepperMotor
 
 def main():
-    motor = BrushedMotor(17, 18)
+    motor = StepperMotor(22, 23)
     motor.init()
 
     try:
         while True:
-            motor.set_duty(float(input("Duty Cyle: ")))
+            motor.set_position(int(input("Position: ")))
     except KeyboardInterrupt:
         pass
 

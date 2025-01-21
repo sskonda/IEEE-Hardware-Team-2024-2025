@@ -1,3 +1,5 @@
+#!/bin/python3
+
 from robot.components import ServoMotor
 
 def main():

@@ -1,3 +1,5 @@
+#!/bin/python3
+
 from robot.components import HallEncoder
 from collections import deque
 import time

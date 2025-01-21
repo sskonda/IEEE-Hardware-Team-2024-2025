@@ -4,12 +4,11 @@ from .encoder import Encoder
 from robot import PI
 import pigpio
 
-GEAR_RATIO = 12#:1
-WHEEL_DIAMETER = 8 # inches
-WHEEL_SEPARATION = 8 # inches
-ENCODER_RESOLUTION = 64 * GEAR_RATIO
 
-class SpeedMotor(Encoder, Component):
+class SpeedMotor(Encoder, Component):    
+    def __init__(self):
+        self._desired_speed = 0.0
+
     def set_speed(self, speed):
         """Sets the desired speed of the motor in RPM
 
@@ -19,24 +18,15 @@ class SpeedMotor(Encoder, Component):
             The desired speed of the motor in RPM (negative for backwards)
         """
         raise NotImplementedError()
+    
+    def get_desired_speed(self):
+        self._desired_speed
 
 
 class DutyMotor(Component):
-    def __init__(self, forward_pin: int, reverse_pin: int):
-        self.forward_pin = forward_pin
-        self.reverse_pin = reverse_pin
-    
-    def init(self):
-        PI.set_mode(self.forward_pin, pigpio.OUTPUT)
-        PI.set_mode(self.reverse_pin, pigpio.OUTPUT)
-
-        PI.set_PWM_dutycycle(self.forward_pin, 0)
-        PI.set_PWM_dutycycle(self.reverse_pin, 0)
-        PI.set_PWM_range(self.forward_pin, 255)
-        PI.set_PWM_range(self.reverse_pin, 255)
-        PI.set_PWM_frequency(self.forward_pin, 100)
-        PI.set_PWM_frequency(self.reverse_pin, 100)
-    
+    def __init__(self):
+        self._duty = 0.0
+        
     def set_duty(self, duty: float):
         """Set the duty cycle of the motor (negative for reverse)
 
@@ -45,22 +35,71 @@ class DutyMotor(Component):
         duty : float
             The desired duty cycle of the motor
         """
-        duty = int(255*duty)
-        PI.set_PWM_dutycycle(self.forward_pin, max(0, duty))
-        PI.set_PWM_dutycycle(self.reverse_pin, -min(0, duty))
+        raise NotImplementedError()
+    
+    def get_duty(self) -> float:
+        return self._duty
+
+
+class PositionMotor(Component):
+    def __init__(self):
+        self._desired_position = 0.0
+    
+    def set_position(self, position: float):
+        """Sets the motor to the given position
+
+        Parameters
+        ----------
+        position : float
+            The desired position (0 being one-side and 1 being the other)
+        """
+        raise NotImplementedError()
+    
+    def get_desired_position(self) -> float:
+        return self._desired_position
+
+    def move(self, delta: float):
+        self.set_position(self.get_desired_position() + delta)
+
+
+class BrushedMotor(DutyMotor, Component):
+    def __init__(self, forward_pin: int, reverse_pin: int):
+        super().__init__()
+        self._forward_pin = forward_pin
+        self._reverse_pin = reverse_pin
+        self.speed = 0
+    
+    def init(self):
+        PI.set_mode(self._forward_pin, pigpio.OUTPUT)
+        PI.set_mode(self._reverse_pin, pigpio.OUTPUT)
+
+        PI.set_PWM_dutycycle(self._forward_pin, 0)
+        PI.set_PWM_dutycycle(self._reverse_pin, 0)
+        PI.set_PWM_range(self._forward_pin, 255)
+        PI.set_PWM_range(self._reverse_pin, 255)
+        PI.set_PWM_frequency(self._forward_pin, 100)
+        PI.set_PWM_frequency(self._reverse_pin, 100)
+    
+    def set_duty(self, duty: float):
+        self._duty = int(255*duty)
+        PI.set_PWM_dutycycle(self._forward_pin, max(0, self._duty))
+        PI.set_PWM_dutycycle(self._reverse_pin, -min(0, self._duty))
     
     def stop(self):
-        PI.set_PWM_dutycycle(self.forward_pin, 0)
-        PI.set_PWM_dutycycle(self.reverse_pin, 0)
-        PI.write(self.forward_pin, 0)
-        PI.write(self.reverse_pin, 0)
+        PI.set_PWM_dutycycle(self._forward_pin, 0)
+        PI.set_PWM_dutycycle(self._reverse_pin, 0)
+        PI.write(self._forward_pin, 0)
+        PI.write(self._reverse_pin, 0)
     
     def release(self):
         self.stop()
+        PI.set_mode(self._forward_pin, pigpio.INPUT)
+        PI.set_mode(self._reverse_pin, pigpio.INPUT)
    
 
-class ServoMotor(Component):
+class ServoMotor(PositionMotor, Component):
     def __init__(self, pin: int, period=20.0, min_pulse=0.8, max_pulse=2.2):
+        super().__init__()
         self.pin = pin
         self.period = period
         self.resolution = 1000
@@ -75,16 +114,85 @@ class ServoMotor(Component):
         PI.set_PWM_frequency(self.pin, int(1000 / self.period))
 
     def set_position(self, position):
-        """Sets the servo to the given position
+        """Moves to the desired position 0 being one side 1 being the other
 
         Parameters
         ----------
         position : float
-            The desired position (0 being one-side and 1 being the other)
+            The desired position from 0 to 1
         """
+        self._desired_position = position
         duty = ((self.max_pulse - self.min_pulse) * position + self.min_pulse)
         PI.set_PWM_dutycycle(self.pin, int(self.resolution * duty + 0.5))
 
     def release(self):
         PI.set_PWM_dutycycle(self.pin, 0)
         PI.write(self.pin, 0)
+        PI.set_mode(self.pin, pigpio.INPUT)
+
+
+class StepperMotor(PositionMotor, Component):
+    def __init__(self, step_pin, direction_pin):
+        super().__init__()
+        self._step_pin = step_pin
+        self._direction_pin = direction_pin
+        self._step_wave = None
+        self._forward_wave = None
+        self._backward_wave = None
+        
+    def init(self):
+        PI.set_mode(self._step_pin, pigpio.OUTPUT)
+        PI.set_mode(self._direction_pin, pigpio.OUTPUT)
+
+        step_pulse = [
+            pigpio.pulse(1 << self._step_pin, 0, 8),    # 2us high pulse
+            pigpio.pulse(0, 1 << self._step_pin, 8),    # 2us low pulse
+        ]
+
+        forward_pulse = [
+            pigpio.pulse(0, 1 << self._direction_pin, 1)
+        ]
+        
+        backward_pulse = [
+            pigpio.pulse(1 << self._direction_pin, 0, 1)
+        ]
+
+        PI.wave_add_new()
+        PI.wave_add_generic(step_pulse)
+        self._step_wave = PI.wave_create()
+        
+        PI.wave_add_generic(forward_pulse)
+        self._forward_wave = PI.wave_create()
+        
+        PI.wave_add_generic(backward_pulse)
+        self._backward_wave = PI.wave_create()
+        
+    def set_position(self, position: float):
+        delta =  int(int(position) - self._desired_position)
+        self._desired_position = int(position)
+
+        remaining_steps = abs(delta)
+        while remaining_steps != 0:
+            # Wait if there is a waveform being transmitted
+            while PI.wave_tx_busy():
+                pass
+            
+            steps = min(2**16-1, remaining_steps)
+            PI.wave_chain([
+                self._forward_wave if delta > 0 else self._backward_wave,
+                255, 0,
+                    self._step_wave,
+                255, 1, steps % 2**8, steps // 2**8
+            ])
+            remaining_steps -= steps
+            
+    def release(self):
+        PI.wave_tx_stop()
+        PI.write(self._step_pin, 0)
+        PI.write(self._direction_pin, 0)
+        PI.set_mode(self._step_pin, pigpio.INPUT)
+        PI.set_mode(self._direction_pin, pigpio.INPUT)
+        PI.wave_delete(self._forward_wave)
+        PI.wave_delete(self._backward_wave)
+
+    

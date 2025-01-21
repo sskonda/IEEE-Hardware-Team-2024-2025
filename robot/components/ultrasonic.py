@@ -5,6 +5,8 @@ import pigpio
 
 SPEED_OF_SOUND = 74.0525 * 2  # us / in (two-way)
 
+# TODO: Might need an echo lock to prevent sensors from interfering, check with hardware
+
 class Ultrasonic(Component):
     def __init__(self, trigger_pin, echo_pin):
         self._trigger_pin = trigger_pin

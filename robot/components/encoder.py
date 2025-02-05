@@ -1,11 +1,10 @@
 from . import Component
 
-from robot import PI
 import pigpio
 
 
 class Encoder(Component):
-    def init(self):
+    def init(self, pi):
         """Initializes the encoder
 
         Raises
@@ -62,13 +61,14 @@ class HallEncoder(Encoder):
         self._cos = None
         self.direction = 1
     
-    def init(self):
-        PI.set_mode(self._sin_pin, pigpio.INPUT)
-        PI.set_mode(self._cos_pin, pigpio.INPUT)
+    def init(self, pi):
+        self.pi = pi
+        self.pi.set_mode(self._sin_pin, pigpio.INPUT)
+        self.pi.set_mode(self._cos_pin, pigpio.INPUT)
 
-        self._cos_cb = PI.callback(self._cos_pin, pigpio.EITHER_EDGE, self._cos_cbf)
-        self._sin_cb = PI.callback(self._sin_pin, pigpio.EITHER_EDGE, self._sin_cbf)
-        PI.set_watchdog(self._sin_pin, self._watchdog)
+        self._cos_cb = self.pi.callback(self._cos_pin, pigpio.EITHER_EDGE, self._cos_cbf)
+        self._sin_cb = self.pi.callback(self._sin_pin, pigpio.EITHER_EDGE, self._sin_cbf)
+        self.pi.set_watchdog(self._sin_pin, self._watchdog)
         
     def _cos_cbf(self, _, level, tick):
         self._cos = (tick, level)
@@ -102,6 +102,6 @@ class HallEncoder(Encoder):
         """
         Cancels the reader and releases resources.
         """
-        PI.set_watchdog(self._sin_pin, 0) # cancel watchdog
+        self.pi.set_watchdog(self._sin_pin, 0) # cancel watchdog
         self._sin_cb.cancel()
         self._cos_cb.cancel()

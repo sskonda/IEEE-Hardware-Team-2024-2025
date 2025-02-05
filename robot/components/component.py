@@ -1,5 +1,5 @@
 class Component():
-    def init(self):
+    def init(self, pi):
         """Acquires the hardware resources to drive the component
         """
         raise NotImplementedError()

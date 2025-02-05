@@ -1,7 +1,6 @@
 from . import Component 
 from .encoder import Encoder
 
-from robot import PI
 import pigpio
 
 
@@ -69,32 +68,33 @@ class BrushedMotor(DutyMotor, Component):
         self._reverse_pin = reverse_pin
         self.speed = 0
     
-    def init(self):
-        PI.set_mode(self._forward_pin, pigpio.OUTPUT)
-        PI.set_mode(self._reverse_pin, pigpio.OUTPUT)
+    def init(self, pi):
+        self.pi = pi
+        self.pi.set_mode(self._forward_pin, pigpio.OUTPUT)
+        self.pi.set_mode(self._reverse_pin, pigpio.OUTPUT)
 
-        PI.set_PWM_dutycycle(self._forward_pin, 0)
-        PI.set_PWM_dutycycle(self._reverse_pin, 0)
-        PI.set_PWM_range(self._forward_pin, 255)
-        PI.set_PWM_range(self._reverse_pin, 255)
-        PI.set_PWM_frequency(self._forward_pin, 100)
-        PI.set_PWM_frequency(self._reverse_pin, 100)
+        self.pi.set_PWM_dutycycle(self._forward_pin, 0)
+        self.pi.set_PWM_dutycycle(self._reverse_pin, 0)
+        self.pi.set_PWM_range(self._forward_pin, 255)
+        self.pi.set_PWM_range(self._reverse_pin, 255)
+        self.pi.set_PWM_frequency(self._forward_pin, 100)
+        self.pi.set_PWM_frequency(self._reverse_pin, 100)
     
     def set_duty(self, duty: float):
         self._duty = int(255*duty)
-        PI.set_PWM_dutycycle(self._forward_pin, max(0, self._duty))
-        PI.set_PWM_dutycycle(self._reverse_pin, -min(0, self._duty))
+        self.pi.set_PWM_dutycycle(self._forward_pin, max(0, self._duty))
+        self.pi.set_PWM_dutycycle(self._reverse_pin, -min(0, self._duty))
     
     def stop(self):
-        PI.set_PWM_dutycycle(self._forward_pin, 0)
-        PI.set_PWM_dutycycle(self._reverse_pin, 0)
-        PI.write(self._forward_pin, 0)
-        PI.write(self._reverse_pin, 0)
+        self.pi.set_PWM_dutycycle(self._forward_pin, 0)
+        self.pi.set_PWM_dutycycle(self._reverse_pin, 0)
+        self.pi.write(self._forward_pin, 0)
+        self.pi.write(self._reverse_pin, 0)
     
     def release(self):
         self.stop()
-        PI.set_mode(self._forward_pin, pigpio.INPUT)
-        PI.set_mode(self._reverse_pin, pigpio.INPUT)
+        self.pi.set_mode(self._forward_pin, pigpio.INPUT)
+        self.pi.set_mode(self._reverse_pin, pigpio.INPUT)
    
 
 class ServoMotor(PositionMotor, Component):
@@ -106,12 +106,13 @@ class ServoMotor(PositionMotor, Component):
         self.min_pulse = min_pulse
         self.max_pulse = max_pulse
     
-    def init(self):
-        PI.set_mode(self.pin, pigpio.OUTPUT)
+    def init(self, pi):
+        self.pi = pi
+        self.pi.set_mode(self.pin, pigpio.OUTPUT)
         
-        PI.set_PWM_dutycycle(self.pin, 0)
-        PI.set_PWM_range(self.pin, int(self.resolution * self.period))
-        PI.set_PWM_frequency(self.pin, int(1000 / self.period))
+        self.pi.set_PWM_dutycycle(self.pin, 0)
+        self.pi.set_PWM_range(self.pin, int(self.resolution * self.period))
+        self.pi.set_PWM_frequency(self.pin, int(1000 / self.period))
 
     def set_position(self, position):
         """Moves to the desired position 0 being one side 1 being the other
@@ -123,12 +124,12 @@ class ServoMotor(PositionMotor, Component):
         """
         self._desired_position = position
         duty = ((self.max_pulse - self.min_pulse) * position + self.min_pulse)
-        PI.set_PWM_dutycycle(self.pin, int(self.resolution * duty + 0.5))
+        self.pi.set_PWM_dutycycle(self.pin, int(self.resolution * duty + 0.5))
 
     def release(self):
-        PI.set_PWM_dutycycle(self.pin, 0)
-        PI.write(self.pin, 0)
-        PI.set_mode(self.pin, pigpio.INPUT)
+        self.pi.set_PWM_dutycycle(self.pin, 0)
+        self.pi.write(self.pin, 0)
+        self.pi.set_mode(self.pin, pigpio.INPUT)
 
 
 class StepperMotor(PositionMotor, Component):
@@ -140,13 +141,14 @@ class StepperMotor(PositionMotor, Component):
         self._forward_wave = None
         self._backward_wave = None
         
-    def init(self):
-        PI.set_mode(self._step_pin, pigpio.OUTPUT)
-        PI.set_mode(self._direction_pin, pigpio.OUTPUT)
+    def init(self, pi):
+        self.pi = pi
+        self.pi.set_mode(self._step_pin, pigpio.OUTPUT)
+        self.pi.set_mode(self._direction_pin, pigpio.OUTPUT)
 
         step_pulse = [
-            pigpio.pulse(1 << self._step_pin, 0, 8),    # 2us high pulse
-            pigpio.pulse(0, 1 << self._step_pin, 8),    # 2us low pulse
+            pigpio.pulse(1 << self._step_pin, 0, 1000),    # 1ms high pulse
+            pigpio.pulse(0, 1 << self._step_pin, 1000),    # 1ms low pulse
         ]
 
         forward_pulse = [
@@ -157,15 +159,15 @@ class StepperMotor(PositionMotor, Component):
             pigpio.pulse(1 << self._direction_pin, 0, 1)
         ]
 
-        PI.wave_add_new()
-        PI.wave_add_generic(step_pulse)
-        self._step_wave = PI.wave_create()
+        self.pi.wave_add_new()
+        self.pi.wave_add_generic(step_pulse)
+        self._step_wave = self.pi.wave_create()
         
-        PI.wave_add_generic(forward_pulse)
-        self._forward_wave = PI.wave_create()
+        self.pi.wave_add_generic(forward_pulse)
+        self._forward_wave = self.pi.wave_create()
         
-        PI.wave_add_generic(backward_pulse)
-        self._backward_wave = PI.wave_create()
+        self.pi.wave_add_generic(backward_pulse)
+        self._backward_wave = self.pi.wave_create()
         
     def set_position(self, position: float):
         delta =  int(int(position) - self._desired_position)
@@ -174,11 +176,11 @@ class StepperMotor(PositionMotor, Component):
         remaining_steps = abs(delta)
         while remaining_steps != 0:
             # Wait if there is a waveform being transmitted
-            while PI.wave_tx_busy():
+            while self.pi.wave_tx_busy():
                 pass
             
             steps = min(2**16-1, remaining_steps)
-            PI.wave_chain([
+            self.pi.wave_chain([
                 self._forward_wave if delta > 0 else self._backward_wave,
                 255, 0,
                     self._step_wave,
@@ -187,12 +189,12 @@ class StepperMotor(PositionMotor, Component):
             remaining_steps -= steps
             
     def release(self):
-        PI.wave_tx_stop()
-        PI.write(self._step_pin, 0)
-        PI.write(self._direction_pin, 0)
-        PI.set_mode(self._step_pin, pigpio.INPUT)
-        PI.set_mode(self._direction_pin, pigpio.INPUT)
-        PI.wave_delete(self._forward_wave)
-        PI.wave_delete(self._backward_wave)
+        self.pi.wave_tx_stop()
+        self.pi.write(self._step_pin, 0)
+        self.pi.write(self._direction_pin, 0)
+        self.pi.set_mode(self._step_pin, pigpio.INPUT)
+        self.pi.set_mode(self._direction_pin, pigpio.INPUT)
+        self.pi.wave_delete(self._forward_wave)
+        self.pi.wave_delete(self._backward_wave)
 
     

@@ -14,7 +14,7 @@ class Camera(Component):
         self.picam2 = picamera2.Picamera2(camera)
         self.detector = apriltag("tag36h11")
     
-    def init(self):
+    def init(self, pi):
         config = self.picam2.create_video_configuration({'format': 'RGB888'})
         self.picam2.configure(config)
         self.picam2.start()

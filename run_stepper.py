@@ -3,7 +3,7 @@
 from robot.components import StepperMotor
 
 def main():
-    motor = StepperMotor(22, 23)
+    motor = StepperMotor(20, 21)
     motor.init()
 
     try:

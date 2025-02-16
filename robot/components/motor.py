@@ -6,6 +6,7 @@ import pigpio
 
 class SpeedMotor(Encoder, Component):    
     def __init__(self):
+        super().__init__()
         self._desired_speed = 0.0
 
     def set_speed(self, speed):
@@ -24,6 +25,7 @@ class SpeedMotor(Encoder, Component):
 
 class DutyMotor(Component):
     def __init__(self):
+        super().__init__()
         self._duty = 0.0
         
     def set_duty(self, duty: float):
@@ -42,6 +44,7 @@ class DutyMotor(Component):
 
 class PositionMotor(Component):
     def __init__(self):
+        super().__init__()
         self._desired_position = 0.0
     
     def set_position(self, position: float):
@@ -58,7 +61,7 @@ class PositionMotor(Component):
         return self._desired_position
 
     def move(self, delta: float):
-        self.set_position(self.get_desired_position() + delta)
+        self.set_position(self.get_desired_position() + delta)    
 
 
 class BrushedMotor(DutyMotor, Component):
@@ -95,6 +98,22 @@ class BrushedMotor(DutyMotor, Component):
         self.stop()
         self.pi.set_mode(self._forward_pin, pigpio.INPUT)
         self.pi.set_mode(self._reverse_pin, pigpio.INPUT)
+    
+    def set_position(self, position: float):
+        """Sets the motor to the given position
+
+        Parameters
+        ----------
+        position : float
+            The desired position (0 being one-side and 1 being the other)
+        """
+        raise NotImplementedError()
+    
+    def get_desired_position(self) -> float:
+        return self._desired_position
+
+    def move(self, delta: float):
+        self.set_position(self.get_desired_position() + delta)
    
 
 class ServoMotor(PositionMotor, Component):

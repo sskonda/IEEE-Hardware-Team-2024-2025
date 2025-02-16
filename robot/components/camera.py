@@ -11,6 +11,7 @@ import time
  
 class Camera(Component):
     def __init__(self, camera: int):
+        super().__init__()
         self.picam2 = picamera2.Picamera2(camera)
         self.detector = apriltag("tag36h11")
     

@@ -47,6 +47,7 @@ class Encoder(Component):
 
 class HallEncoder(Encoder):
     def __init__(self, sin_pin, cos_pin, resolution=1):
+        super().__init__()
         self.resolution = resolution
 
         self._watchdog = 200 # Milliseconds.
@@ -60,6 +61,8 @@ class HallEncoder(Encoder):
 
         self._cos = None
         self.direction = 1
+
+        self._ticks = 0
     
     def init(self, pi):
         self.pi = pi
@@ -69,14 +72,21 @@ class HallEncoder(Encoder):
         self._cos_cb = self.pi.callback(self._cos_pin, pigpio.EITHER_EDGE, self._cos_cbf)
         self._sin_cb = self.pi.callback(self._sin_pin, pigpio.EITHER_EDGE, self._sin_cbf)
         self.pi.set_watchdog(self._sin_pin, self._watchdog)
+
+        self._ticks = 0
+        
         
     def _cos_cbf(self, _, level, tick):
         self._cos = (tick, level)
+        self._ticks += self.direction
+
         
     def _sin_cbf(self, _, level, tick):
         if level == 0:
+            self._ticks += self.direction
             self._low_tick = tick
         if level == 1: # Rising edge.
+            self._ticks += self.direction
             if self._high_tick is not None:
                 t = pigpio.tickDiff(self._high_tick, tick)
                 self._period = t
@@ -85,8 +95,7 @@ class HallEncoder(Encoder):
             self._high_tick = tick
         elif level == 2: # Watchdog timeout.
             if self._period is not None:
-                if self._period < 2000000000:
-                    self._period += (self._watchdog * 1000)
+                self._period += (self._watchdog * 1000)
 
     def get_speed(self):
         """
@@ -97,6 +106,22 @@ class HallEncoder(Encoder):
             RPM = 60000000.0 / (self._period * self.resolution)
 
         return self.direction * RPM
+    
+    def get_ticks(self):
+        """
+        Returns the number of ticks.
+        """
+        return self._ticks
+    
+    def get_angle(self):
+        """
+        Returns the angle in degrees.
+        """
+        return self._ticks * 360 / self.resolution
+
+    def reset(self):
+        self._ticks = 0
+        pass
 
     def release(self):
         """

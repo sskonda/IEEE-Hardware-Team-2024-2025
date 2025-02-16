@@ -8,6 +8,7 @@ SPEED_OF_SOUND = 74.0525 * 2  # us / in (two-way)
 
 class Ultrasonic(Component):
     def __init__(self, trigger_pin, echo_pin):
+        super().__init__()
         self._trigger_pin = trigger_pin
         self._echo_pin = echo_pin
 

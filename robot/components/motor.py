@@ -114,6 +114,66 @@ class BrushedMotor(DutyMotor, Component):
 
     def move(self, delta: float):
         self.set_position(self.get_desired_position() + delta)
+
+class DualBrushedMotor:
+    """Class to control two brushed motors for movement operations."""
+    
+    def __init__(self, left_motor: BrushedMotor, right_motor: BrushedMotor):
+        self.left_motor = left_motor
+        self.right_motor = right_motor
+        self.speed = 0.5  # Default movement speed (50% duty cycle)
+
+    def set_speed(self, speed: float):
+        """Sets the movement speed (0 to 1)."""
+        self.speed = max(0, min(1, speed))  # Clamp between 0 and 1
+
+    def move_forward(self):
+        """Moves the lawnmower forward."""
+        self.left_motor.set_duty(self.speed)
+        self.right_motor.set_duty(self.speed)
+
+    def move_backward(self):
+        """Moves the lawnmower backward."""
+        self.left_motor.set_duty(-self.speed)
+        self.right_motor.set_duty(-self.speed)
+
+    def rotate_left_90(self):
+        """Rotates the lawnmower 90 degrees to the left."""
+        self.left_motor.set_duty(-self.speed)
+        self.right_motor.set_duty(self.speed)
+        self._wait_for_rotation(90)
+
+    def rotate_right_90(self):
+        """Rotates the lawnmower 90 degrees to the right."""
+        self.left_motor.set_duty(self.speed)
+        self.right_motor.set_duty(-self.speed)
+        self._wait_for_rotation(90)
+
+    def rotate_left_180(self):
+        """Rotates the lawnmower 180 degrees to the left."""
+        self.left_motor.set_duty(-self.speed)
+        self.right_motor.set_duty(self.speed)
+        self._wait_for_rotation(180)
+
+    def rotate_right_180(self):
+        """Rotates the lawnmower 180 degrees to the right."""
+        self.left_motor.set_duty(self.speed)
+        self.right_motor.set_duty(-self.speed)
+        self._wait_for_rotation(180)
+
+    def stop(self):
+        """Stops both motors."""
+        self.left_motor.stop()
+        self.right_motor.stop()
+
+    def _wait_for_rotation(self, degrees):
+        """
+        Simulates waiting for a rotation to complete.
+        The actual implementation should use sensors like an IMU or encoder feedback.
+        """
+        import time
+        time.sleep(degrees / 90 * 0.5)  # Adjust timing as needed
+
    
 
 class ServoMotor(PositionMotor, Component):

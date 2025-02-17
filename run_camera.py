@@ -6,7 +6,7 @@ from apriltag import apriltag
 
 def main():
     camera = Camera(0)
-    camera.init()
+    camera.init(None)
 
     try:
         while True:

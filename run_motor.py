@@ -1,10 +1,10 @@
 #!/bin/python3
-
+import pigpio
 from robot.components import BrushedMotor
 
 def main():
     motor = BrushedMotor(17, 18)
-    motor.init()
+    motor.init(pi=pigpio.pi())
 
     try:
         while True:

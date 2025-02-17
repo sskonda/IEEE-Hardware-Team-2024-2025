@@ -1,12 +1,12 @@
 #!/bin/python3
 
+import pigpio
 from robot.components import Ultrasonic
-from collections import deque
 import time
 
 def main():
     ultrasonic = Ultrasonic(17, 23)
-    ultrasonic.init()
+    ultrasonic.init(pi=pigpio.pi())
 
     try:
         while True:

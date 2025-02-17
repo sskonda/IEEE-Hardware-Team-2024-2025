@@ -3,6 +3,9 @@ class Component():
         """Acquires the hardware resources to drive the component
         """
         raise NotImplementedError()
+    
+    def update(self):
+        pass
 
     def release(self):
         """Releases the hardward resources to drive the component

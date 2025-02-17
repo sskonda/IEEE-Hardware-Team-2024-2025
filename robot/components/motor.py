@@ -267,6 +267,13 @@ class PIDMotor(PositionMotor, SpeedMotor, Component):
     def __init__(self, duty_motor: DutyMotor, encoder: Encoder, pid: PID):
         self.duty_motor = duty_motor
         self.encoder = encoder
+        self.pid = pid
         
-        
-        
+    def set_position(self, position: float):
+        self.pid.setpoint = position
+        self._desired_position = position
+    
+    def update(self):
+        current_position = self.encoder.get_angle()
+        control = self.pid.update(current_position)
+        self.duty_motor.set_duty(max(-1, min(1, control)))

@@ -1,3 +1,4 @@
+from typing import Callable, Optional, Tuple, cast
 from . import Component
 from .. import PID
 from .encoder import Encoder
@@ -11,7 +12,7 @@ class SpeedMotor(Encoder, Component):
         super().__init__()
         self._desired_speed = 0.0
 
-    def set_speed(self, speed):
+    def set_speed(self, speed: float):
         """Sets the desired speed of the motor in RPM
 
         Parameters
@@ -23,6 +24,9 @@ class SpeedMotor(Encoder, Component):
     
     def get_desired_speed(self):
         self._desired_speed
+    
+    def stop(self):
+        self.set_speed(0.0)
 
 
 class DutyMotor(Component):
@@ -42,6 +46,9 @@ class DutyMotor(Component):
     
     def get_duty(self) -> float:
         return self._duty
+    
+    def stop(self):
+        self.set_duty(0.0)
 
 
 class PositionMotor(Component):
@@ -264,16 +271,52 @@ class StepperMotor(PositionMotor, Component):
         self.pi.wave_delete(self._backward_wave)
 
 class PIDMotor(PositionMotor, SpeedMotor, Component):
-    def __init__(self, duty_motor: DutyMotor, encoder: Encoder, pid: PID):
+    def __init__(self, duty_motor: DutyMotor, encoder: Encoder, position_pid: Optional[PID] = None, velocity_pid: Optional[PID] = None, smoothing = 0.0, max_duty=1.0):
         self.duty_motor = duty_motor
         self.encoder = encoder
-        self.pid = pid
+        self.position_pid = position_pid
+        self.velocity_pid = velocity_pid
+
+        self.smoothing = smoothing
+        self.last_control = 0.0
+        self.max_duty = max_duty
+
+        if position_pid is not None:
+            self.active_mode = (cast(PID, self.position_pid), self.encoder.get_angle) 
+        elif velocity_pid is not None:
+            self.active_mode = (cast(PID, self.velocity_pid), self.encoder.get_speed)
+        else:
+            raise ValueError("Either position or velocity PID must be set")
+
+    def init(self, pi):
+        self.duty_motor.init(pi)
+        self.encoder.init(pi)
         
     def set_position(self, position: float):
-        self.pid.setpoint = position
-        self._desired_position = position
+        if self.position_pid is None:
+            raise ValueError("Position PID is not set")
+        else:
+            self._desired_position = position
+            self.position_pid.setpoint = position
+            self.active_mode = (self.position_pid, self.encoder.get_angle)
+
+    def set_speed(self, speed: float):
+        if self.velocity_pid is None:
+            raise ValueError("Velocity PID is not set")
+        else:
+            self._desired_speed = speed
+            self.velocity_pid.setpoint = speed
+            self.active_mode = (self.velocity_pid, self.encoder.get_speed)
+        
+    def pid(self):
+        return self.active_mode[0]
     
     def update(self):
-        current_position = self.encoder.get_angle()
-        control = self.pid.update(current_position)
-        self.duty_motor.set_duty(max(-1, min(1, control)))
+        pid, get_value = self.active_mode
+        control = pid.update(get_value())
+        control = self.last_control * self.smoothing + control * (1 - self.smoothing)
+        self.last_control = control
+        self.duty_motor.set_duty(max(-self.max_duty, min(self.max_duty, control)))
+
+    def stop(self):
+        self.duty_motor.stop()

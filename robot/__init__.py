@@ -1,18 +1,34 @@
 import time
 import pigpio
 from .pid import PID
-from .components.motor import BrushedMotor, StepperMotor, ServoMotor
+from .components.motor import BrushedMotor, StepperMotor, ServoMotor, PIDMotor
 from .components.encoder import HallEncoder
 from .components.ultrasonic import Ultrasonic
+
+DRIVE_WHEEL_DIAMETER = 3.14961
+DRIVE_TICKS_PER_REV = 1200
+DRIVE_SPEED = 0.8
+
+DRIVE_P = 1/60
+DRIVE_I = 0
+DRIVE_D = 0.1
+DRIVE_FF = 0.1
+
 
 PI = pigpio.pi()
 PI.wave_clear()
 
-RIGHT_DRIVE_MOTOR = BrushedMotor(18, 12)  # Right Drive Motor
-RIGHT_DRIVE_ENCODER = HallEncoder(23, 24, 1200)  # Right Drive Encoder
+RIGHT_DRIVE_MOTOR = BrushedMotor(12, 18)  # Right Drive Motor
+RIGHT_DRIVE_ENCODER = HallEncoder(24, 23, 1200)  # Right Drive Encoder
 
 LEFT_DRIVE_MOTOR = BrushedMotor(19, 13)  # Left Drive Motor
 LEFT_DRIVE_ENCODER = HallEncoder(14, 15, 1200)  # Left Drive Encoder
+
+RIGHT = (RIGHT_DRIVE_MOTOR, RIGHT_DRIVE_ENCODER)
+LEFT = (LEFT_DRIVE_MOTOR, LEFT_DRIVE_ENCODER)
+
+RIGHT_PID_MOTOR = PIDMotor(*RIGHT, position_pid=PID(1/60, 0, 0.1, 0.1), smoothing=0.1, max_duty=DRIVE_SPEED)
+LEFT_PID_MOTOR = PIDMotor(*LEFT, position_pid=PID(1/60, 0, 0.1, 0.1), smoothing=0.1, max_duty=DRIVE_SPEED)
 
 # INTAKE_MOTOR = BrushedMotor(11, None)  # Intake Motor
 # INTAKE_ENCODER = HallEncoder(14, 15)  # Intake Encoder
@@ -46,7 +62,6 @@ ROBOT = {
     "AFT_ULTRASONIC": AFT_ULTRASONIC
 }
 
-SPEED = 0.6
 
 def main():
     import tty

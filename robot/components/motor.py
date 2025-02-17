@@ -1,5 +1,7 @@
-from . import Component 
+from . import Component
+from .. import PID
 from .encoder import Encoder
+
 
 import pigpio
 
@@ -99,21 +101,6 @@ class BrushedMotor(DutyMotor, Component):
         self.pi.set_mode(self._forward_pin, pigpio.INPUT)
         self.pi.set_mode(self._reverse_pin, pigpio.INPUT)
     
-    def set_position(self, position: float):
-        """Sets the motor to the given position
-
-        Parameters
-        ----------
-        position : float
-            The desired position (0 being one-side and 1 being the other)
-        """
-        raise NotImplementedError()
-    
-    def get_desired_position(self) -> float:
-        return self._desired_position
-
-    def move(self, delta: float):
-        self.set_position(self.get_desired_position() + delta)
 
 class DualBrushedMotor:
     """Class to control two brushed motors for movement operations."""
@@ -276,4 +263,10 @@ class StepperMotor(PositionMotor, Component):
         self.pi.wave_delete(self._forward_wave)
         self.pi.wave_delete(self._backward_wave)
 
-    
+class PIDMotor(PositionMotor, SpeedMotor, Component):
+    def __init__(self, duty_motor: DutyMotor, encoder: Encoder, pid: PID):
+        self.duty_motor = duty_motor
+        self.encoder = encoder
+        
+        
+        

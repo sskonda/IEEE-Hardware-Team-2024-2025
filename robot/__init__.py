@@ -1,5 +1,6 @@
 import time
 import pigpio
+from .pid import PID
 from .components.motor import BrushedMotor, StepperMotor, ServoMotor
 from .components.encoder import HallEncoder
 from .components.ultrasonic import Ultrasonic

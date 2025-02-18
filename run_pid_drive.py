@@ -1,8 +1,6 @@
 import math
 import pigpio
 from robot import DRIVE_WHEEL_DIAMETER, RIGHT_PID_MOTOR, LEFT_PID_MOTOR
-from robot.pid import PID
-from robot.components import BrushedMotor, HallEncoder, PIDMotor
 
 PI = pigpio.pi()
 PI.wave_clear()

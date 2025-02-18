@@ -27,8 +27,8 @@ LEFT_DRIVE_ENCODER = HallEncoder(14, 15, 1200)  # Left Drive Encoder
 RIGHT = (RIGHT_DRIVE_MOTOR, RIGHT_DRIVE_ENCODER)
 LEFT = (LEFT_DRIVE_MOTOR, LEFT_DRIVE_ENCODER)
 
-RIGHT_PID_MOTOR = PIDMotor(*RIGHT, position_pid=PID(1/60, 0, 0.1, 0.1), smoothing=0.1, max_duty=DRIVE_SPEED)
-LEFT_PID_MOTOR = PIDMotor(*LEFT, position_pid=PID(1/60, 0, 0.1, 0.1), smoothing=0.1, max_duty=DRIVE_SPEED)
+RIGHT_PID_MOTOR = PIDMotor(*RIGHT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.0, 1/30, 0.0, 0.1), smoothing=0.1, max_duty=DRIVE_SPEED)
+LEFT_PID_MOTOR = PIDMotor(*LEFT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.0, 1/30, 0.0, 0.1), smoothing=0.1, max_duty=DRIVE_SPEED)
 
 # INTAKE_MOTOR = BrushedMotor(11, None)  # Intake Motor
 # INTAKE_ENCODER = HallEncoder(14, 15)  # Intake Encoder
@@ -83,31 +83,31 @@ def main():
             match x:
                 case 'w':
                     print("Forward")
-                    RIGHT_DRIVE_MOTOR.set_duty(-SPEED)
-                    LEFT_DRIVE_MOTOR.set_duty(SPEED)
+                    RIGHT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
+                    LEFT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
                     
                     
                     # DISTANCE = 20
 
                     # start_angle = RIGHT_DRIVE_ENCODER.get_angle()
                     # while RIGHT_DRIVE_ENCODER.get_angle() > start_angle - DISTANCE / 9.5 * 360:
-                    #     RIGHT_DRIVE_MOTOR.set_duty(SPEED)
-                    #     LEFT_DRIVE_MOTOR.set_duty(SPEED)
+                    #     RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
+                    #     LEFT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
                     
                     # RIGHT_DRIVE_MOTOR.stop()
                     # LEFT_DRIVE_MOTOR.stop()
                 case 'a':
                     print("Left")
-                    RIGHT_DRIVE_MOTOR.set_duty(-SPEED)
-                    LEFT_DRIVE_MOTOR.set_duty(-SPEED)
+                    RIGHT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
+                    LEFT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
                 case 'd':
                     print("Right")
-                    RIGHT_DRIVE_MOTOR.set_duty(SPEED)
-                    LEFT_DRIVE_MOTOR.set_duty(SPEED)
+                    RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
+                    LEFT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
                 case 's':
                     print("Backward")
-                    RIGHT_DRIVE_MOTOR.set_duty(SPEED)
-                    LEFT_DRIVE_MOTOR.set_duty(-SPEED)
+                    RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
+                    LEFT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
                 case 'l':
                     print("Clamp Tighten")
                     CLAMP_MOTOR.set_duty(1)
@@ -116,16 +116,16 @@ def main():
                     CLAMP_MOTOR.set_duty(-1)
                 case 'q':
                     print("Left wheel F")
-                    LEFT_DRIVE_MOTOR.set_duty(SPEED)
+                    LEFT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
                 case 'e':
                     print("Left wheel B")
-                    LEFT_DRIVE_MOTOR.set_duty(-SPEED)
+                    LEFT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
                 case ']':
                     print("Right wheel F")
-                    RIGHT_DRIVE_MOTOR.set_duty(SPEED)
+                    RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
                 case '[':
                     print("Right wheel B")
-                    RIGHT_DRIVE_MOTOR.set_duty(-SPEED)
+                    RIGHT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
                 case ',':
                     print("Rotate Left")
                     start_angle = RIGHT_DRIVE_ENCODER.get_angle()
@@ -133,8 +133,8 @@ def main():
                     # last_time = time.time()
                     ANGLE = 72
                     while RIGHT_DRIVE_ENCODER.get_angle() > start_angle - 5 * ANGLE:
-                        RIGHT_DRIVE_MOTOR.set_duty(SPEED)
-                        LEFT_DRIVE_MOTOR.set_duty(-SPEED)
+                        RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
+                        LEFT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
                         # curr_time = time.time()
                         # t += min(1, 0.1 * curr_time - last_time)
                         # last_time = curr_time

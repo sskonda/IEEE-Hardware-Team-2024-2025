@@ -1,6 +1,6 @@
 import math
 import pigpio
-from robot import DRIVE_WHEEL_DIAMETER, RIGHT_PID_MOTOR, LEFT_PID_MOTOR
+from robot import DRIVE_WHEEL_SPACING, DRIVE_WHEEL_DIAMETER, RIGHT_PID_MOTOR, LEFT_PID_MOTOR
 from robot.pid import PID
 
 PI = pigpio.pi()
@@ -26,7 +26,7 @@ try:
         try:
             while abs(HEADING_PID.error() or float('inf')) > 3:
                 wheel_angle = (RIGHT_PID_MOTOR.encoder.get_angle() + -LEFT_PID_MOTOR.encoder.get_angle()) / 2
-                current_heading = math.cos(24.73 / 180 * math.pi) * DRIVE_WHEEL_DIAMETER / 12.5 * wheel_angle
+                current_heading = math.cos(24.73 / 180 * math.pi) * DRIVE_WHEEL_DIAMETER / DRIVE_WHEEL_SPACING * wheel_angle
                 control = HEADING_PID.update(current_heading)
                 print(control)
                 RIGHT_PID_MOTOR.set_speed(control)

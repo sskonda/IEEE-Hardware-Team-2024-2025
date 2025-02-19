@@ -8,6 +8,7 @@ from .components.ultrasonic import Ultrasonic
 DRIVE_WHEEL_DIAMETER = 3.14961
 DRIVE_TICKS_PER_REV = 1200
 DRIVE_SPEED = 0.8
+DRIVE_WHEEL_SPACING = 12.48917
 
 DRIVE_P = 1/60
 DRIVE_I = 0
@@ -30,8 +31,8 @@ LEFT = (LEFT_DRIVE_MOTOR, LEFT_DRIVE_ENCODER)
 RIGHT_PID_MOTOR = PIDMotor(*RIGHT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.0, 1/30, 0.0, 0.1), smoothing=0.1, max_duty=DRIVE_SPEED)
 LEFT_PID_MOTOR = PIDMotor(*LEFT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.0, 1/30, 0.0, 0.1), smoothing=0.1, max_duty=DRIVE_SPEED)
 
-# INTAKE_MOTOR = BrushedMotor(11, None)  # Intake Motor
-# INTAKE_ENCODER = HallEncoder(14, 15)  # Intake Encoder
+INTAKE_MOTOR = BrushedMotor(26, 11)  # Intake Motor
+INTAKE_ENCODER = HallEncoder(14, 15)  # Intake Encoder
 
 CLAMP_MOTOR = BrushedMotor(10, 9)  # Clamp Motor
 CLAMP_ENCODER = HallEncoder(25, 8)  # Clamp Encoder
@@ -50,8 +51,8 @@ ROBOT = {
     "RIGHT_DRIVE_ENCODER": RIGHT_DRIVE_ENCODER,
     "LEFT_DRIVE_MOTOR": LEFT_DRIVE_MOTOR,
     "LEFT_DRIVE_ENCODER": LEFT_DRIVE_ENCODER,
-    # "INTAKE_MOTOR": INTAKE_MOTOR,
-    # "INTAKE_ENCODER": INTAKE_ENCODER,
+    "INTAKE_MOTOR": INTAKE_MOTOR,
+    "INTAKE_ENCODER": INTAKE_ENCODER,
     "CLAMP_MOTOR": CLAMP_MOTOR,
     "CLAMP_ENCODER": CLAMP_ENCODER,
     "BIN_LIFT_STEPPER": BIN_LIFT_STEPPER,
@@ -79,70 +80,45 @@ def main():
     try:
         while x != chr(27): # ESC
             x=sys.stdin.read(1)[0]
-            print("You pressed", x)
+            print("You pressed", ord(x))
             match x:
+                case 'i': 
+                    print("Run Intake")
+                    INTAKE_MOTOR.set_duty(1)
+                case 'o':
+                    print("Spit Intake")
+                    INTAKE_MOTOR.set_duty(-1)
+                case '[':
+                    print("Lift Boxes")
+                    BIN_LIFT_STEPPER.set_position(1250)
+                case ']':
+                    print("Lower Boxes")
+                    BIN_LIFT_STEPPER.set_position(0)
                 case 'w':
                     print("Forward")
-                    RIGHT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
+                    RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
                     LEFT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
-                    
-                    
-                    # DISTANCE = 20
-
-                    # start_angle = RIGHT_DRIVE_ENCODER.get_angle()
-                    # while RIGHT_DRIVE_ENCODER.get_angle() > start_angle - DISTANCE / 9.5 * 360:
-                    #     RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
-                    #     LEFT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
-                    
-                    # RIGHT_DRIVE_MOTOR.stop()
-                    # LEFT_DRIVE_MOTOR.stop()
                 case 'a':
                     print("Left")
-                    RIGHT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
+                    RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
                     LEFT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
                 case 'd':
                     print("Right")
-                    RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
+                    RIGHT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
                     LEFT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
                 case 's':
                     print("Backward")
-                    RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
-                    LEFT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
-                case 'l':
-                    print("Clamp Tighten")
-                    CLAMP_MOTOR.set_duty(1)
-                case 'v':
-                    print("Clamp Release")
-                    CLAMP_MOTOR.set_duty(-1)
-                case 'q':
-                    print("Left wheel F")
-                    LEFT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
-                case 'e':
-                    print("Left wheel B")
-                    LEFT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
-                case ']':
-                    print("Right wheel F")
-                    RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
-                case '[':
-                    print("Right wheel B")
                     RIGHT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
-                case ',':
-                    print("Rotate Left")
-                    start_angle = RIGHT_DRIVE_ENCODER.get_angle()
-                    # t = 0
-                    # last_time = time.time()
-                    ANGLE = 72
-                    while RIGHT_DRIVE_ENCODER.get_angle() > start_angle - 5 * ANGLE:
-                        RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
-                        LEFT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
-                        # curr_time = time.time()
-                        # t += min(1, 0.1 * curr_time - last_time)
-                        # last_time = curr_time
-                    RIGHT_DRIVE_MOTOR.stop()
-                    LEFT_DRIVE_MOTOR.stop()
+                    LEFT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
+                case 'j':
+                    print("Clamp Tighten")
+                    CLAMP_MOTOR.set_duty(0.5)
+                case 'k':
+                    print("Clamp Release")
+                    CLAMP_MOTOR.set_duty(-0.5)
                 case ' ':
                     print("Stop")
-                    for motor in [RIGHT_DRIVE_MOTOR, LEFT_DRIVE_MOTOR, CLAMP_MOTOR]:
+                    for motor in [RIGHT_DRIVE_MOTOR, LEFT_DRIVE_MOTOR, CLAMP_MOTOR, INTAKE_MOTOR]:
                         motor.stop()
     except KeyboardInterrupt as e:
         pass

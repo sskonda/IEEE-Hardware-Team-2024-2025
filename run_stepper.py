@@ -1,10 +1,11 @@
 #!/bin/python3
 
+from robot import PI, BIN_LIFT_STEPPER
 from robot.components import StepperMotor
 
 def main():
-    motor = StepperMotor(20, 21)
-    motor.init()
+    motor = BIN_LIFT_STEPPER
+    motor.init(PI)
 
     try:
         while True:

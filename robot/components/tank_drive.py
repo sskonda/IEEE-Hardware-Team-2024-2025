@@ -1,12 +1,16 @@
 import time
-from .motor_driver import DualBrushedMotor
+import numpy as np
 
-class TankDrive:
+from ..pid import PID
+from .. import DRIVE_WHEEL_DIAMETER, DRIVE_WHEEL_SPACING
+from .motor import PIDMotor
+
+class TankDrive():
     """
     Controls a robot with tank drive movement using two brushed motors.
     """
 
-    def __init__(self, left_motor, right_motor):
+    def __init__(self, left_motor: PIDMotor, right_motor: PIDMotor):
         """
         Initializes the tank drive system.
 
@@ -17,74 +21,88 @@ class TankDrive:
         right_motor : BrushedMotor
             The motor controlling the right side of the robot.
         """
-        self.drive = DualBrushedMotor(left_motor, right_motor)
-        self.rotation_speed = 0.5  # Default rotation speed (50% duty cycle)
+        self.left_motor = left_motor
+        self.right_motor = right_motor
 
-    def set_speed(self, speed: float):
+        self.position_pid = PID(1, 0, 0.1, 0.1)
+        self.heading_pid = PID(1, 0, 0.1, 0.1)
+
+        self.current_pose = np.array([0, 0, 0])
+        self.target_pose = np.array([0, 0, 0])
+
+    def to_robot(self):
         """
-        Sets the movement speed for forward and backward motion.
+        Converts a vector from the global frame to the robot frame.
 
         Parameters
         ----------
-        speed : float
-            Speed value between 0 and 1.
-        """
-        self.drive.set_speed(speed)
+        vector : numpy.ndarray
+            The vector to convert.
+        direction : bool, optional
+            If True, the vector is a direction vector. Default is False.
 
-    def set_rotation_speed(self, speed: float):
+        Returns
+        -------
+        numpy.ndarray
+            The vector in the robot frame.
         """
-        Sets the rotation speed for turning movements.
+        angle = self.current_pose[2]
+        return np.linalg.inv(self.to_world())
+    
+    def to_world(self):
+        """
+        Converts a vector from the robot frame to the global frame.
 
         Parameters
         ----------
-        speed : float
-            Speed value between 0 and 1.
+        vector : numpy.ndarray
+            The vector to convert.
+        direction : bool, optional
+            If True, the vector is a direction vector. Default is False.
+
+        Returns
+        -------
+        numpy.ndarray
+            The vector in the global frame.
         """
-        self.rotation_speed = max(0, min(1, speed))  # Clamp between 0 and 1
+        angle = -self.current_pose[2]
+        return np.array([[np.cos(angle), np.sin(angle), self.current_pose[0]], [-np.sin(angle), np.cos(angle), self.current_pose[1]], [0, 0, 1]])
+    
+    def update_position(self, pose: np.ndarray, weight: float = 0.1):
+        self.current_pose[:2] = weight * pose[:2] + (1 - weight) * self.current_pose[:2]
 
-    def move_forward(self):
-        """Moves the robot forward."""
-        self.drive.move_forward()
+    def update_heading(self, heading: float, weight: float = 0.1):
+        self.current_pose[2] = weight * heading + (1 - weight) * self.current_pose[2]
 
-    def move_backward(self):
-        """Moves the robot backward."""
-        self.drive.move_backward()
-
-    def rotate(self, angle: float, direction: str = "right"):
-        """
-        Rotates the robot by a specified angle.
+    def set_target(self, pose: np.ndarray):
+        """Sets the target pose for the robot to drive to.
 
         Parameters
         ----------
-        angle : float
-            The desired angle of rotation in degrees.
-        direction : str, optional
-            Rotation direction, "right" or "left". Default is "right".
+        pose : np.ndarray
+            [x, y, theta] pose to drive to. [in, in, deg]
         """
-        if direction.lower() == "right":
-            self.drive.left_motor.set_duty(self.rotation_speed)
-            self.drive.right_motor.set_duty(-self.rotation_speed)
-        elif direction.lower() == "left":
-            self.drive.left_motor.set_duty(-self.rotation_speed)
-            self.drive.right_motor.set_duty(self.rotation_speed)
-        else:
-            raise ValueError("Invalid direction! Use 'right' or 'left'.")
+        self.position_pid.reset()
+        self.heading_pid.reset()
 
-        self._wait_for_rotation(angle)
-        self.drive.stop()
+        self.target_pose = pose
 
-    def _wait_for_rotation(self, degrees):
-        """
-        Simulates waiting for a rotation to complete.
-        The actual implementation should use encoders or an IMU.
-
-        Parameters
-        ----------
-        degrees : float
-            The number of degrees to rotate.
-        """
-        time.sleep(degrees / 90 * 0.5)  # Adjust timing as needed
+    def update(self):
+        # Do rotation
+        self.heading_pid.setpoint = self.target_pose[2]
+        
+        if abs(self.heading_pid.error()) > 3:
+            wheel_angle = (self.right_motor.encoder.get_angle() + -self.left_motor.encoder.get_angle()) / 2
+            current_heading = np.cos(24.73 / 180 * np.pi) * DRIVE_WHEEL_DIAMETER / DRIVE_WHEEL_SPACING * wheel_angle
+            control = self.heading_pid.update(current_heading)
+            print(control)
+            self.right_motor.set_speed(control)
+            self.left_motor.set_speed(-control)
+            
+        self.right_motor.update()
+        self.left_motor.update()
 
     def stop(self):
         """Stops both motors."""
-        self.drive.stop()
+        self.right_motor.stop()
+        self.left_motor.stop()

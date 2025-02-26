@@ -33,7 +33,7 @@ class PID:
         return self.kp * error + self.ki * self.integral + self.kd * derivative + math.copysign(self.kff, error)
 
     def error(self):
-        return self.prev_error
+        return self.prev_error or float('inf')
 
     def reset(self):
         self.prev_error = None

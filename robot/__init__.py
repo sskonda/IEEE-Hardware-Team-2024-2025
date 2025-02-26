@@ -90,7 +90,7 @@ def main():
                     INTAKE_MOTOR.set_duty(-1)
                 case '[':
                     print("Lift Boxes")
-                    BIN_LIFT_STEPPER.set_position(1250)
+                    BIN_LIFT_STEPPER.set_position(2250)
                 case ']':
                     print("Lower Boxes")
                     BIN_LIFT_STEPPER.set_position(0)
@@ -112,10 +112,10 @@ def main():
                     LEFT_DRIVE_MOTOR.set_duty(-DRIVE_SPEED)
                 case 'j':
                     print("Clamp Tighten")
-                    CLAMP_MOTOR.set_duty(0.5)
+                    CLAMP_MOTOR.set_duty(1)
                 case 'k':
                     print("Clamp Release")
-                    CLAMP_MOTOR.set_duty(-0.5)
+                    CLAMP_MOTOR.set_duty(-1)
                 case ' ':
                     print("Stop")
                     for motor in [RIGHT_DRIVE_MOTOR, LEFT_DRIVE_MOTOR, CLAMP_MOTOR, INTAKE_MOTOR]:

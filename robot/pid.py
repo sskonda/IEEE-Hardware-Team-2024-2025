@@ -1,6 +1,5 @@
 import time
 import math
-from typing import Optional
 
 class PID:
     def __init__(self, kp=1.0, ki=0.0, kd=0.0, kff=0.0, setpoint=0.0):

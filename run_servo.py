@@ -1,15 +1,14 @@
 #!/bin/python3
 
 import pigpio
-from robot.components import ServoMotor
+from robot import BEACON_SERVO
 
 def main():
-    motor = ServoMotor(17)
-    motor.init(pi=pigpio.pi())
+    BEACON_SERVO.init(pi=pigpio.pi())
 
     try:
         while True:
-            motor.set_position(float(input("Position: ")))
+            BEACON_SERVO.set_position(float(input("Position: ")))
     except KeyboardInterrupt:
         pass
 

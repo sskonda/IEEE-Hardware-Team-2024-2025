@@ -304,6 +304,7 @@ class PIDMotor(PositionMotor, SpeedMotor, Component):
         if self.velocity_pid is None:
             raise ValueError("Velocity PID is not set")
         else:
+            
             self._desired_speed = speed
             self.velocity_pid.setpoint = speed
             self.active_mode = (self.velocity_pid, self.encoder.get_speed)

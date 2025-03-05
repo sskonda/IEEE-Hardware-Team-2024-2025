@@ -103,7 +103,7 @@ class HallEncoder(Encoder):
         """
         RPM = 0.0
         if self._period is not None:
-            RPM = 60000000.0 / (self._period * self.resolution)
+            RPM = 1 / self._period / (self.resolution / 4) * 60 * 1_000_000
 
         return self.direction * RPM
     

@@ -1,8 +1,10 @@
-import time
+import math
 import numpy as np
 
+from robot.components import Component
+
 from ..pid import PID
-from .. import DRIVE_WHEEL_DIAMETER, DRIVE_WHEEL_SPACING
+from ..constants import DRIVE_WHEEL_DIAMETER, DRIVE_WHEEL_OFFTANGENT, DRIVE_WHEEL_SPACING
 from .motor import PIDMotor
 
 class TankDrive():
@@ -16,19 +18,28 @@ class TankDrive():
 
         Parameters
         ----------
-        left_motor : BrushedMotor
+        left_motor : PIDMotor
             The motor controlling the left side of the robot.
-        right_motor : BrushedMotor
+        right_motor : PIDMotor
             The motor controlling the right side of the robot.
         """
         self.left_motor = left_motor
         self.right_motor = right_motor
 
-        self.position_pid = PID(1, 0, 0.1, 0.1)
-        self.heading_pid = PID(1, 0, 0.1, 0.1)
+        self.position_pid = PID(1, 0, 0.1, 0.0)
+        self.heading_pid = PID(10.0, 0, 0.1, 0.0)
 
-        self.current_pose = np.array([0, 0, 0])
-        self.target_pose = np.array([0, 0, 0])
+        self.current_pose = np.array([0.0, 0.0, 0.0])
+        self.target_pose = np.array([0.0, 0.0, 0.0])
+
+    def init(self, pi):
+        self.left_motor.init(pi)
+        self.right_motor.init(pi)
+        
+        self.__last_wheel_angles = np.array([
+            self.right_motor.encoder.get_angle(),
+            self.left_motor.encoder.get_angle()
+        ])
 
     def to_robot(self):
         """
@@ -46,7 +57,6 @@ class TankDrive():
         numpy.ndarray
             The vector in the robot frame.
         """
-        angle = self.current_pose[2]
         return np.linalg.inv(self.to_world())
     
     def to_world(self):
@@ -82,23 +92,45 @@ class TankDrive():
         pose : np.ndarray
             [x, y, theta] pose to drive to. [in, in, deg]
         """
-        self.position_pid.reset()
-        self.heading_pid.reset()
-
         self.target_pose = pose
 
     def update(self):
+        error = (self.to_robot() @ np.append(self.target_pose[:2], [1,]))[:2]
+        
+        # Do translation
+        if error[0] > 5:
+            self.position_pid.setpoint = np.linalg.norm(error).item()
+            self.position_pid.update(np.linalg.norm(error).item())
+            return
+
         # Do rotation
         self.heading_pid.setpoint = self.target_pose[2]
         
-        if abs(self.heading_pid.error()) > 3:
-            wheel_angle = (self.right_motor.encoder.get_angle() + -self.left_motor.encoder.get_angle()) / 2
-            current_heading = np.cos(24.73 / 180 * np.pi) * DRIVE_WHEEL_DIAMETER / DRIVE_WHEEL_SPACING * wheel_angle
-            control = self.heading_pid.update(current_heading)
-            print(control)
-            self.right_motor.set_speed(control)
-            self.left_motor.set_speed(-control)
-            
+        heading_output = self.heading_pid.update(self.current_pose[2])
+
+        self.right_motor.set_speed(heading_output)
+        self.left_motor.set_speed(-heading_output)
+       
+        # Do inverse kinematics
+        angles = np.array([
+            self.right_motor.encoder.get_angle(),
+            self.left_motor.encoder.get_angle()
+        ])
+        
+        d_angles = self.__last_wheel_angles - angles
+        
+        self.__last_wheel_angles = angles
+        
+        d_wheel_distance = (DRIVE_WHEEL_DIAMETER * np.pi) * d_angles / 360
+        
+        d_wheel_arc_length = d_wheel_distance * np.cos(math.radians(DRIVE_WHEEL_OFFTANGENT))
+        
+        A, B = d_wheel_arc_length
+        d_theta = math.degrees((B - A) / DRIVE_WHEEL_SPACING)
+
+        self.current_pose[:2] += d_wheel_distance * np.array([np.cos(self.current_pose[2]), np.sin(self.current_pose[2])])
+        self.current_pose[2] += d_theta
+           
         self.right_motor.update()
         self.left_motor.update()
 

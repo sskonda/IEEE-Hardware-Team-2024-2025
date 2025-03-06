@@ -5,16 +5,12 @@
 # Note: needs simplejpeg to be installed (pip3 install simplejpeg).
 
 import io
+import cv2
 import logging
 import socketserver
+import numpy as np
 from http import server
-from threading import Condition
-
-import libcamera
-
-from picamera2 import Picamera2
-from picamera2.encoders import JpegEncoder
-from picamera2.outputs import FileOutput
+from threading import Condition, Thread
 
 PAGE = """\
 <html>
@@ -29,17 +25,19 @@ PAGE = """\
 """
 
 
+
 class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
         self.frame = None
         self.condition = Condition()
 
     def write(self, buf):
-        print(buf.shape)
+        buf = cv2.imencode(".jpeg", buf)[1].tobytes()
         with self.condition:
             self.frame = buf
             self.condition.notify_all()
 
+OUTPUT = StreamingOutput()
 
 class StreamingHandler(server.BaseHTTPRequestHandler):
     def do_GET(self):
@@ -63,9 +61,9 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.end_headers()
             try:
                 while True:
-                    with output.condition:
-                        output.condition.wait()
-                        frame = output.frame
+                    with OUTPUT.condition:
+                        OUTPUT.condition.wait()
+                        frame = OUTPUT.frame
                     self.wfile.write(b'--FRAME\r\n')
                     self.send_header('Content-Type', 'image/jpeg')
                     self.send_header('Content-Length', len(frame))
@@ -85,15 +83,42 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     allow_reuse_address = True
     daemon_threads = True
 
-
-picam2 = Picamera2()
-picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}, transform=libcamera.Transform(vflip=1)))
-output = StreamingOutput()
-picam2.start_recording(JpegEncoder(), FileOutput(output))
-
-try:
+def run_server():
     address = ('', 8000)
     server = StreamingServer(address, StreamingHandler)
     server.serve_forever()
-finally:
-    picam2.stop_recording()
+
+# Draw indicator function
+def draw_indicator(image, position, heading, length=50, color=(0, 0, 255), thickness=2):
+    img_height, img_width = image.shape[:2]
+    
+    # Normalize position from (-48, -48) to (48, 48) onto image dimensions
+    x = int((position[0] + 48) / 96 * img_width)
+    y = int((48 - position[1]) / 96 * img_height)
+    
+    # Convert heading from degrees to radians
+    angle_rad = np.deg2rad(heading)
+    
+    # Calculate end point for the arrow
+    end_x = int(x + length * np.cos(angle_rad))
+    end_y = int(y - length * np.sin(angle_rad))
+    
+    # Draw the arrow line
+    cv2.arrowedLine(image, (x, y), (end_x, end_y), color, thickness)
+    
+    return image
+
+SERVER = Thread(target=run_server)
+
+if __name__ == "__main__":
+    SERVER.start()
+    
+    # Create a blank white image
+    bg = np.ones((500, 500, 3), dtype=np.uint8) * 255
+    
+    i = 0
+    while True:
+        img = draw_indicator(np.copy(bg), (0, 0), i)
+        i += 1
+        i %= 360
+        OUTPUT.write(img)

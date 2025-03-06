@@ -26,8 +26,7 @@ class TankDrive():
         self.left_motor = left_motor
         self.right_motor = right_motor
 
-        self.position_pid = PID(1, 0, 0.1, 0.0)
-        self.heading_pid = PID(10.0, 0, 0.1, 0.0)
+        self.pose_pid = PID(1.0, 0.0, 0.1, 0.0)
 
         self.current_pose = np.array([0.0, 0.0, 0.0])
         self.target_pose = np.array([0.0, 0.0, 0.0])
@@ -75,7 +74,7 @@ class TankDrive():
         numpy.ndarray
             The vector in the global frame.
         """
-        angle = -self.current_pose[2]
+        angle = -math.radians(self.current_pose[2])
         return np.array([[np.cos(angle), np.sin(angle), self.current_pose[0]], [-np.sin(angle), np.cos(angle), self.current_pose[1]], [0, 0, 1]])
     
     def update_position(self, pose: np.ndarray, weight: float = 0.1):
@@ -93,24 +92,40 @@ class TankDrive():
             [x, y, theta] pose to drive to. [in, in, deg]
         """
         self.target_pose = pose
+        self.pose_pid.setpoint = pose
 
     def update(self):
         error = (self.to_robot() @ np.append(self.target_pose[:2], [1,]))[:2]
         
         # Do translation
-        if error[0] > 5:
-            self.position_pid.setpoint = np.linalg.norm(error).item()
-            self.position_pid.update(np.linalg.norm(error).item())
-            return
+        s = ""
+        # print("Error", error)
+        if np.linalg.norm(error) > 1:  # precision in inches
+            phi = math.degrees(math.atan2(error[1], error[0]))
+            if abs((phi + 360) - 180) < 15.0:
+                phi =
+                s += "Reversing\n"
+                drive_cmd = -30.0
+                rotate_cmd = phi - 180
+            elif abs(phi) < 15.0:  # precision in degrees
+                s += "Driving\n"
+                drive_cmd = 30.0
+                rotate_cmd = phi
+            else:
+                s += "Turning\n"
+                drive_cmd = 0.0
+                rotate_cmd = phi
+        else:
+            s += "Done\n"
+            drive_cmd = 0.0
+            rotate_cmd = (self.target_pose[2] - self.current_pose[2]) 
 
-        # Do rotation
-        self.heading_pid.setpoint = self.target_pose[2]
+        s += f"Drive: {drive_cmd}\n"
+        s += f"Rotate: {rotate_cmd}"
+        print(s)
+        self.right_motor.set_speed(drive_cmd + rotate_cmd)
+        self.left_motor.set_speed(drive_cmd - rotate_cmd)
         
-        heading_output = self.heading_pid.update(self.current_pose[2])
-
-        self.right_motor.set_speed(heading_output)
-        self.left_motor.set_speed(-heading_output)
-       
         # Do inverse kinematics
         angles = np.array([
             self.right_motor.encoder.get_angle(),
@@ -128,11 +143,16 @@ class TankDrive():
         A, B = d_wheel_arc_length
         d_theta = math.degrees((B - A) / DRIVE_WHEEL_SPACING)
 
-        self.current_pose[:2] += d_wheel_distance * np.array([np.cos(self.current_pose[2]), np.sin(self.current_pose[2])])
+        self.current_pose[:2] += -np.mean(d_wheel_distance) * np.array([np.cos(math.radians(self.current_pose[2])), np.sin(math.radians(self.current_pose[2]))])
         self.current_pose[2] += d_theta
-           
+            
         self.right_motor.update()
         self.left_motor.update()
+
+    def reset(self):    
+        self.pose_pid.reset()
+        self.left_motor.pid().reset()
+        self.left_motor.pid().reset()
 
     def stop(self):
         """Stops both motors."""

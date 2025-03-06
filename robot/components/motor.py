@@ -1,4 +1,6 @@
 from typing import Callable, Optional, Tuple, cast
+
+import numpy as np
 from . import Component
 from .. import PID
 from .encoder import Encoder
@@ -297,16 +299,15 @@ class PIDMotor(PositionMotor, SpeedMotor, Component):
             raise ValueError("Position PID is not set")
         else:
             self._desired_position = position
-            self.position_pid.setpoint = position
+            self.position_pid.setpoint = np.array([position])
             self.active_mode = (self.position_pid, self.encoder.get_angle)
 
     def set_speed(self, speed: float):
         if self.velocity_pid is None:
             raise ValueError("Velocity PID is not set")
         else:
-            
             self._desired_speed = speed
-            self.velocity_pid.setpoint = speed
+            self.velocity_pid.setpoint = np.array([speed])
             self.active_mode = (self.velocity_pid, self.encoder.get_speed)
         
     def pid(self):
@@ -314,7 +315,7 @@ class PIDMotor(PositionMotor, SpeedMotor, Component):
     
     def update(self):
         pid, get_value = self.active_mode
-        control = pid.update(get_value())
+        control = pid.update(np.array([get_value()])).item()
         control = self.last_control * self.smoothing + control * (1 - self.smoothing)
         self.last_control = control
         self.duty_motor.set_duty(max(-self.max_duty, min(self.max_duty, control)))

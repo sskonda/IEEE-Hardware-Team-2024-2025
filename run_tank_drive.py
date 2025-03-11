@@ -5,7 +5,7 @@ import numpy as np
 import pigpio
 from visualizer import draw_indicator, SERVER, OUTPUT
 from robot.components import TankDrive
-from robot import DRIVE_WHEEL_DIAMETER, RIGHT_PID_MOTOR, LEFT_PID_MOTOR
+from robot import RIGHT_PID_MOTOR, LEFT_PID_MOTOR
 
 PI = pigpio.pi()
 SERVER.start()
@@ -24,7 +24,7 @@ try:
     while True:
         drive.reset()
         drive.set_target(np.array([float(val) for val in input("Enter x y heading: ").split()]))
-        drive.current_pose = np.array([0.0, 0.0, 0.0])
+
         try:
             while True:
                 drive.update()

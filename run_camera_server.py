@@ -35,7 +35,6 @@ class StreamingOutput(io.BufferedIOBase):
         self.condition = Condition()
 
     def write(self, buf):
-        print(buf.shape)
         with self.condition:
             self.frame = buf
             self.condition.notify_all()

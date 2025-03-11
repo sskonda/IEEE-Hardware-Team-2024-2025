@@ -80,8 +80,8 @@ if objpoints and imgpoints:
     print(f" Principal Point: cx = {cx}, cy = {cy}")
 
 else:
-    print("❌ Calibration failed: No chessboard corners detected in any images.")
-
+    print("❌> Calibration failed: No chessboard corners detected in any images.")
+>
 # Validate Focal Length Function (Runs in Headless Mode)
 def validate_focal_length(image_path, known_distance, real_width):
     """ Validate focal length by using an image with a known distance and object width. """

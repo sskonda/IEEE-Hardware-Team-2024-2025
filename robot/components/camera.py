@@ -15,6 +15,7 @@ class Camera(Component):
         self.picam2 = picamera2.Picamera2(camera)
         self.load_calibration()
         self.detector = apriltag("tag36h11")
+        self.pose_matrix = None
     
     def init(self, pi):
         config = self.picam2.create_video_configuration({'format': 'RGB888'})
@@ -64,8 +65,9 @@ class Camera(Component):
     
     #Write pose matrix to self.pose_matrix
     #get pose using AprilTag Pose Estimation
-    def pose_matrix(self,tag= 3.125 ):
-        detections= self.detect_Apriltag()
+    def calculate_pose_matrix(self,tag= 3.125 ):
+        detections= self.detect_apriltag()
+
         object_points = np.array([ # object points of the april tag
         [-tag / 2, -tag / 2, 0], 
         [ tag / 2, -tag / 2, 0],
@@ -74,7 +76,8 @@ class Camera(Component):
     ], dtype=np.float32)
 
         for detection in detections: 
-            image_points = np.array(detection["corners"], dtype=np.float32)
+            image_points = np.array(detection["lb-rb-rt-lt"], dtype=np.float32)
+
             #Use to solve pnp to get success,rotation, translation, 
             success, rvec, tvec = cv2.solvePnP(object_points, image_points, self.camera_matrix, self.distortion_coeffs)
             if success:
@@ -84,6 +87,5 @@ class Camera(Component):
             self.pose_matrix = np.eye(4) #     Return a 2-D array with ones on the diagonal and zeros elsewhere.
             self.pose_matrix[:3, :3] = rmat
             self.pose_matrix[:3, 3] = tvec.flatten()
-            print(f"Pose matrix for tag {detection['id']}:\n{self.pose_matrix}") # print to console the pose for each tag
         return self.pose_matrix
     

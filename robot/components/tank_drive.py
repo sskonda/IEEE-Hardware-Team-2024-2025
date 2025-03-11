@@ -102,11 +102,10 @@ class TankDrive():
         # print("Error", error)
         if np.linalg.norm(error) > 1:  # precision in inches
             phi = math.degrees(math.atan2(error[1], error[0]))
-            if abs((phi + 360) - 180) < 15.0:
-                phi =
+            if abs((phi + 360) % 360 - 180) < 15.0:
                 s += "Reversing\n"
                 drive_cmd = -30.0
-                rotate_cmd = phi - 180
+                rotate_cmd = (phi + 360) % 360 - 180
             elif abs(phi) < 15.0:  # precision in degrees
                 s += "Driving\n"
                 drive_cmd = 30.0
@@ -151,7 +150,7 @@ class TankDrive():
 
     def reset(self):    
         self.pose_pid.reset()
-        self.left_motor.pid().reset()
+        self.right_motor.pid().reset()
         self.left_motor.pid().reset()
 
     def stop(self):

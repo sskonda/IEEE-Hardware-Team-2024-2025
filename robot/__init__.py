@@ -16,7 +16,7 @@ LEFT = (LEFT_DRIVE_MOTOR, LEFT_DRIVE_ENCODER)
 RIGHT_PID_MOTOR = PIDMotor(*RIGHT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.005, 0.015, 0.0, 0.0), smoothing=0.1, max_duty=DRIVE_SPEED)
 LEFT_PID_MOTOR = PIDMotor(*LEFT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.005, 0.015, 0.0, 0.0), smoothing=0.1, max_duty=DRIVE_SPEED)
 
-CAMERA = Camera()
+#CAMERA = Camera()
 DRIVE = TankDrive(LEFT_PID_MOTOR, RIGHT_PID_MOTOR)
 
 INTAKE_MOTOR = BrushedMotor(26, 11)  # Intake Motor
@@ -49,7 +49,7 @@ ROBOT = {
     "PORT_ULTRASONIC": PORT_ULTRASONIC,
     "STARBOARD_ULTRASONIC": STARBOARD_ULTRASONIC,
     "AFT_ULTRASONIC": AFT_ULTRASONIC,
-    "CAMERA": CAMERA,
+#    "CAMERA": CAMERA,
     "DRIVE": DRIVE,
 }
 

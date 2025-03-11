@@ -1,20 +1,31 @@
 import picamera2
 from . import Component
 
+from time import sleep
 from apriltag import apriltag
 import cv2
 import numpy as np
 import picamera2
 import sys
-import time
 
+APRILTAG_POSE = {
+    0: np.array([0.0, 22.5, 0.0]),
+    1: np.array([0.0, 22.5, 0.0]),
+    2: np.array([0.0, 22.5, 0.0]),
+    3: np.array([0.0, 22.5, 0.0]),
+    4: np.array([0.0, 22.5, 0.0]),
+    5: np.array([32.0, 45.0, 270.0]),
+    6: np.array([44.0, 0.0, 90.0]),
+    7: np.array([93.0, 22.5, 180.0])
+}
  
 class Camera(Component):
-    def __init__(self, camera: int):
+    def __init__(self, camera: int = 0):
         super().__init__()
         self.picam2 = picamera2.Picamera2(camera)
         self.load_calibration()
         self.detector = apriltag("tag36h11")
+        self.detected = None
         self.pose_matrix = None
     
     def init(self, pi):
@@ -56,12 +67,38 @@ class Camera(Component):
         im = self.get_frame()  # get frams undistorts them 
         im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
         sys.stdout.write("\n") # DONT DELETE THIS LINE, NECESSARY FOR SOME REASON???
-        return self.detector.detect(im)
+        detection = self.detector.detect(im)
+        return detection
+
+    def poll_for_light(self):
+        N = 100
+        brightness = np.empty(N)
+        for i in range(N):
+            im = self.get_frame()
+            brightness[i] = np.mean(cv2.cvtColor(im, cv2.COLOR_BGR2GRAY))
+        
+        print(brightness)
+        std = np.std(brightness)
+        mean = np.mean(brightness)
+        print(f"Mean: {mean}, Std: {std}")
+        
+        try:
+            while True:
+                im = self.get_frame()
+                brightness = np.mean(cv2.cvtColor(im, cv2.COLOR_BGR2GRAY))
+                print(f"Brightness: {brightness}")
+                if brightness > mean + 100.0 * std:
+                    print("Light detected.")                
+                    break
+        except KeyboardInterrupt:
+            print("Manual Start.")
+            pass
+        
+        return
 
     def release(self):
-        # Immpletement
+        # Implement
         self.picam2.stop()
-        pass
     
     #Write pose matrix to self.pose_matrix
     #get pose using AprilTag Pose Estimation

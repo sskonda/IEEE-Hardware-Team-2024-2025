@@ -32,13 +32,15 @@ class TankDrive():
         self.target_pose = np.array([0.0, 0.0, 0.0])
 
     def init(self, pi):
-        self.left_motor.init(pi)
-        self.right_motor.init(pi)
+        success = self.left_motor.init(pi) and self.right_motor.init(pi)
         
         self.__last_wheel_angles = np.array([
             self.right_motor.encoder.get_angle(),
             self.left_motor.encoder.get_angle()
         ])
+
+        return success
+
 
     def to_robot(self):
         """

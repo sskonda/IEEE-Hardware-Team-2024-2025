@@ -21,6 +21,7 @@ class Ultrasonic(Component):
         self.pi.set_mode(self._echo_pin, pigpio.INPUT)
 
         self.pi.callback(self._echo_pin, pigpio.EITHER_EDGE, self._echo_cbf)
+        return True
     
     def ping(self):
         self.pi.gpio_trigger(self._trigger_pin, 10, pigpio.HIGH)

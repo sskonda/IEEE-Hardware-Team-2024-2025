@@ -94,6 +94,8 @@ class BrushedMotor(DutyMotor, Component):
         self.pi.set_PWM_frequency(self._forward_pin, 100)
         self.pi.set_PWM_frequency(self._reverse_pin, 100)
     
+        return True
+    
     def set_duty(self, duty: float):
         self._duty = int(255*duty)
         self.pi.set_PWM_dutycycle(self._forward_pin, max(0, self._duty))
@@ -110,68 +112,6 @@ class BrushedMotor(DutyMotor, Component):
         self.pi.set_mode(self._forward_pin, pigpio.INPUT)
         self.pi.set_mode(self._reverse_pin, pigpio.INPUT)
     
-
-class DualBrushedMotor:
-    """Class to control two brushed motors for movement operations."""
-    
-    def __init__(self, left_motor: BrushedMotor, right_motor: BrushedMotor):
-        self.left_motor = left_motor
-        self.right_motor = right_motor
-        self.speed = 0.5  # Default movement speed (50% duty cycle)
-
-    def set_speed(self, speed: float):
-        """Sets the movement speed (0 to 1)."""
-        self.speed = max(0, min(1, speed))  # Clamp between 0 and 1
-
-    def move_forward(self):
-        """Moves the lawnmower forward."""
-        self.left_motor.set_duty(self.speed)
-        self.right_motor.set_duty(self.speed)
-
-    def move_backward(self):
-        """Moves the lawnmower backward."""
-        self.left_motor.set_duty(-self.speed)
-        self.right_motor.set_duty(-self.speed)
-
-    def rotate_left_90(self):
-        """Rotates the lawnmower 90 degrees to the left."""
-        self.left_motor.set_duty(-self.speed)
-        self.right_motor.set_duty(self.speed)
-        self._wait_for_rotation(90)
-
-    def rotate_right_90(self):
-        """Rotates the lawnmower 90 degrees to the right."""
-        self.left_motor.set_duty(self.speed)
-        self.right_motor.set_duty(-self.speed)
-        self._wait_for_rotation(90)
-
-    def rotate_left_180(self):
-        """Rotates the lawnmower 180 degrees to the left."""
-        self.left_motor.set_duty(-self.speed)
-        self.right_motor.set_duty(self.speed)
-        self._wait_for_rotation(180)
-
-    def rotate_right_180(self):
-        """Rotates the lawnmower 180 degrees to the right."""
-        self.left_motor.set_duty(self.speed)
-        self.right_motor.set_duty(-self.speed)
-        self._wait_for_rotation(180)
-
-    def stop(self):
-        """Stops both motors."""
-        self.left_motor.stop()
-        self.right_motor.stop()
-
-    def _wait_for_rotation(self, degrees):
-        """
-        Simulates waiting for a rotation to complete.
-        The actual implementation should use sensors like an IMU or encoder feedback.
-        """
-        import time
-        time.sleep(degrees / 90 * 0.5)  # Adjust timing as needed
-
-   
-
 class ServoMotor(PositionMotor, Component):
     def __init__(self, pin: int, period=20.0, min_pulse=0.8, max_pulse=2.2):
         super().__init__()
@@ -188,6 +128,7 @@ class ServoMotor(PositionMotor, Component):
         self.pi.set_PWM_dutycycle(self.pin, 0)
         self.pi.set_PWM_range(self.pin, int(self.resolution * self.period))
         self.pi.set_PWM_frequency(self.pin, int(1000 / self.period))
+        return True
 
     def set_position(self, position):
         """Moves to the desired position 0 being one side 1 being the other
@@ -243,6 +184,7 @@ class StepperMotor(PositionMotor, Component):
         
         self.pi.wave_add_generic(backward_pulse)
         self._backward_wave = self.pi.wave_create()
+        return True
         
     def set_position(self, position: float):
         delta =  int(int(position) - self._desired_position)
@@ -291,8 +233,8 @@ class PIDMotor(PositionMotor, SpeedMotor, Component):
             raise ValueError("Either position or velocity PID must be set")
 
     def init(self, pi):
-        self.duty_motor.init(pi)
-        self.encoder.init(pi)
+        return self.duty_motor.init(pi) and self.encoder.init(pi)
+
         
     def set_position(self, position: float):
         if self.position_pid is None:
@@ -319,6 +261,9 @@ class PIDMotor(PositionMotor, SpeedMotor, Component):
         control = self.last_control * self.smoothing + control * (1 - self.smoothing)
         self.last_control = control
         self.duty_motor.set_duty(max(-self.max_duty, min(self.max_duty, control)))
+
+        self.duty_motor.update()
+        self.encoder.update()
 
     def stop(self):
         self.duty_motor.stop()

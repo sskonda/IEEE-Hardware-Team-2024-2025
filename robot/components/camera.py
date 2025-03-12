@@ -22,16 +22,22 @@ APRILTAG_POSE = {
 class Camera(Component):
     def __init__(self, camera: int = 0):
         super().__init__()
-        self.picam2 = picamera2.Picamera2(camera)
-        self.load_calibration()
+        self.camera_idx = camera
         self.detector = apriltag("tag36h11")
         self.detected = None
         self.pose_matrix = None
     
     def init(self, pi):
-        config = self.picam2.create_video_configuration({'format': 'RGB888'})
-        self.picam2.configure(config)
-        self.picam2.start()
+        try:
+            self.picam2 = picamera2.Picamera2(self.camera_idx)
+            self.load_calibration()
+            config = self.picam2.create_video_configuration({'format': 'RGB888'})
+            self.picam2.configure(config)
+            self.picam2.start()
+            return True
+        except Exception as e:
+            print(f"Failed to initialize camera: {e}", file=sys.stderr)
+            return False
     
     def get_frame(self) -> np.ndarray:
         frame = self.picam2.capture_array()

@@ -16,7 +16,8 @@ LEFT = (LEFT_DRIVE_MOTOR, LEFT_DRIVE_ENCODER)
 RIGHT_PID_MOTOR = PIDMotor(*RIGHT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.005, 0.015, 0.0, 0.0), smoothing=0.1, max_duty=DRIVE_SPEED)
 LEFT_PID_MOTOR = PIDMotor(*LEFT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.005, 0.015, 0.0, 0.0), smoothing=0.1, max_duty=DRIVE_SPEED)
 
-#CAMERA = Camera()
+CAMERA = Camera()
+IMU = IMU()
 DRIVE = TankDrive(LEFT_PID_MOTOR, RIGHT_PID_MOTOR)
 
 INTAKE_MOTOR = BrushedMotor(26, 11)  # Intake Motor
@@ -35,10 +36,8 @@ STARBOARD_ULTRASONIC = Ultrasonic(4, 17)  # Starboard-Side Ultrasonic
 AFT_ULTRASONIC = Ultrasonic(27, 22)  # Aft-Side Ultrasonic
 
 ROBOT = {
-    "RIGHT_DRIVE_MOTOR": RIGHT_DRIVE_MOTOR,
-    "RIGHT_DRIVE_ENCODER": RIGHT_DRIVE_ENCODER,
-    "LEFT_DRIVE_MOTOR": LEFT_DRIVE_MOTOR,
-    "LEFT_DRIVE_ENCODER": LEFT_DRIVE_ENCODER,
+    "DRIVE": DRIVE,
+    "IMU": IMU,
     "INTAKE_MOTOR": INTAKE_MOTOR,
     "INTAKE_ENCODER": INTAKE_ENCODER,
     "CLAMP_MOTOR": CLAMP_MOTOR,
@@ -49,7 +48,7 @@ ROBOT = {
     "PORT_ULTRASONIC": PORT_ULTRASONIC,
     "STARBOARD_ULTRASONIC": STARBOARD_ULTRASONIC,
     "AFT_ULTRASONIC": AFT_ULTRASONIC,
-#    "CAMERA": CAMERA,
+    # "CAMERA": CAMERA,
     "DRIVE": DRIVE,
 }
 
@@ -65,9 +64,20 @@ def main():
         
         for component in ROBOT:
             print("Initializing", component)
-            ROBOT[component].init(PI)
-        
-        CAMERA.poll_for_light()
+            if not ROBOT[component].init(PI):
+                print("Failed to initialize", component)
+                ROBOT[component] = None
+
+        if ROBOT["CAMERA"] is not None:
+            ROBOT["CAMERA"].poll_for_light()
+        else:
+            input("Press Enter to start driving...")
+
+        while True:
+            for component in ROBOT:
+                print("Updating", component)
+                ROBOT[component].update()
+            
 
         # DRIVE.reset()
         # DRIVE.current_pose = np.array([0.0, 0.0, 0.0])

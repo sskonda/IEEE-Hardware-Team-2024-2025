@@ -64,7 +64,7 @@ class HallEncoder(Encoder):
 
         self._ticks = 0
     
-    def init(self, pi):
+    def init(self, pi: pigpio.pi) -> bool:
         self.pi = pi
         self.pi.set_mode(self._sin_pin, pigpio.INPUT)
         self.pi.set_mode(self._cos_pin, pigpio.INPUT)
@@ -74,6 +74,7 @@ class HallEncoder(Encoder):
         self.pi.set_watchdog(self._sin_pin, self._watchdog)
 
         self._ticks = 0
+        return True
         
         
     def _cos_cbf(self, _, level, tick):

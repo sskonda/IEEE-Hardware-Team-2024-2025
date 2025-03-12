@@ -1,5 +1,7 @@
+import pigpio
+
 class Component():
-    def init(self, pi):
+    def init(self, pi: pigpio.pi) -> bool:
         """Acquires the hardware resources to drive the component
         """
         raise NotImplementedError()

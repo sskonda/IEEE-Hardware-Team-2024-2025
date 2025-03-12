@@ -109,7 +109,7 @@ class BrushedMotor(DutyMotor, Component):
         self.pi.write(self._forward_pin, 0)
         self.pi.write(self._reverse_pin, 0)
     
-    def release(self):
+    def _release(self):
         self.stop()
         self.pi.set_mode(self._forward_pin, pigpio.INPUT)
         self.pi.set_mode(self._reverse_pin, pigpio.INPUT)
@@ -145,7 +145,7 @@ class ServoMotor(PositionMotor, Component):
         duty = ((self.max_pulse - self.min_pulse) * position + self.min_pulse)
         self.pi.set_PWM_dutycycle(self.pin, int(self.resolution * duty + 0.5))
 
-    def release(self):
+    def _release(self):
         self.pi.set_PWM_dutycycle(self.pin, 0)
         self.pi.write(self.pin, 0)
         self.pi.set_mode(self.pin, pigpio.INPUT)
@@ -209,7 +209,7 @@ class StepperMotor(PositionMotor, Component):
             ])
             remaining_steps -= steps
             
-    def release(self):
+    def _release(self):
         self.pi.wave_tx_stop()
         self.pi.write(self._step_pin, 0)
         self.pi.write(self._direction_pin, 0)
@@ -271,7 +271,7 @@ class PIDMotor(PositionMotor, SpeedMotor, Component):
         self.duty_motor.update()
         self.encoder.update()
     
-    def release(self):
+    def _release(self):
         self.duty_motor.release()
         self.encoder.release()
 

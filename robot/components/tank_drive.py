@@ -1,4 +1,6 @@
 import math
+from turtle import heading
+from typing import Any
 import numpy as np
 
 from robot.components import Component
@@ -6,6 +8,15 @@ from robot.components import Component
 from ..pid import PID
 from ..constants import DRIVE_WHEEL_DIAMETER, DRIVE_WHEEL_OFFTANGENT, DRIVE_WHEEL_SPACING
 from .motor import PIDMotor
+
+def pos_neg(angle) -> float:
+    return (angle + 180.0) % 360.0 - 180.0
+
+def full_pos(angle) -> float:
+    return angle % 360.0
+
+def dist(a, b) -> float:
+    return abs(pos_neg(a - b))
 
 class TankDrive(Component):
     """
@@ -98,24 +109,25 @@ class TankDrive(Component):
         # Do translation
         s = ""
         # print("Error", error)
-        if np.linalg.norm(error) > 1:  # precision in inches
-            phi = math.degrees(math.atan2(error[1], error[0]))
-            if abs((phi + 360) % 360 - 180) < 15.0:
-                s += "Reversing\n"
-                drive_cmd = -30.0
-                rotate_cmd = (phi + 360) % 360 - 180
-            elif abs(phi) < 15.0:  # precision in degrees
-                s += "Driving\n"
-                drive_cmd = 30.0
-                rotate_cmd = phi
-            else:
-                s += "Turning\n"
-                drive_cmd = 0.0
-                rotate_cmd = phi
-        else:
-            s += "Done\n"
-            drive_cmd = 0.0
-            rotate_cmd = (self.target_pose[2] - self.current_pose[2]) 
+        # distance = float(np.linalg.norm(error))
+        # if distance > 1.0:  # precision in inches
+        #     phi = math.degrees(math.atan2(error[1], error[0]))
+        #     if dist(phi, 180.0) < 15.0:
+        #         s += "Reversing\n"
+        #         drive_cmd = -distance - 15.0
+        #         rotate_cmd = pos_neg(phi - 180.0)
+        #     elif dist(phi, 0.0) < 15.0:  # precision in degrees
+        #         s += "Driving\n"
+        #         drive_cmd = distance + 15.0
+        #         rotate_cmd = phi
+        #     else:
+        #         s += "Turning\n"
+        #         drive_cmd = 0.0
+        #         rotate_cmd = phi
+        # else:
+        #     s += "Done\n"
+        drive_cmd = 0.0
+        rotate_cmd = pos_neg(self.target_pose[2] - self.current_pose[2])
 
         s += f"Drive: {drive_cmd}\n"
         s += f"Rotate: {rotate_cmd}"
@@ -146,7 +158,7 @@ class TankDrive(Component):
         self.right_motor.update()
         self.left_motor.update()
 
-    def at_target(self, position_tolerance=0.1, heading_tolerance=1.0):
+    def at_target(self, position_tolerance=2.0, heading_tolerance=1.0):
         """
         Returns True if the robot is at the target pose.
 
@@ -155,9 +167,11 @@ class TankDrive(Component):
         bool
             True if the robot is at the target pose.
         """
-        return np.linalg.norm(self.current_pose[:2] - self.target_pose[:2]) < position_tolerance and abs(self.current_pose[2] - self.target_pose[2]) < heading_tolerance
+        position_done = np.linalg.norm(self.current_pose[:2] - self.target_pose[:2]) < position_tolerance
+        heading_done = dist(self.current_pose[2], self.target_pose[2]) < heading_tolerance
+        return heading_done
     
-    def release(self):
+    def _release(self):
         """Releases the motors."""
         self.left_motor.release()
         self.right_motor.release()

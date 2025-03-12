@@ -103,7 +103,7 @@ class Camera(Component):
         
         return
 
-    def release(self):
+    def _release(self):
         # Implement
         self.picam2.stop()
     

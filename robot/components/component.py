@@ -25,6 +25,16 @@ class Component():
     def release(self):
         """Releases the hardward resources to drive the component
         """
+        if self.initialized:
+            try:
+                self._release()
+            except Exception as e:
+                print(f"Failed to release component: {e}", file=sys.stderr)
+        self.initialized = False
+    
+    def _release(self):
+        """Releases the hardward resources to drive the component
+        """
         raise NotImplementedError()
     
     def __del__(self):

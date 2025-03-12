@@ -1,5 +1,6 @@
 import pigpio
 
+import random
 from .pid import PID
 from .constants import *
 from .components import *
@@ -60,16 +61,17 @@ def main():
 
     try:
         # Wait for start signal
-        input("Press Enter to start...")
+        # input("Press Enter to start...")
         
         for component in ROBOT:
             print("Initializing", component)
             ROBOT[component].init(PI)
 
-        if not CAMERA.initialized: 
-            ROBOT["CAMERA"].poll_for_light()
+        if CAMERA.initialized: 
+            CAMERA.poll_for_light()
         else:
-            input("Press Enter to start driving...")
+            # input("Press Enter to start driving...")
+            pass
 
         current_heading = 0.0
         state = 0
@@ -78,36 +80,34 @@ def main():
             for component in ROBOT:
                 if not ROBOT[component].initialized:
                     continue
-                print("Updating", component)
                 ROBOT[component].update()
             
             # Update heading
             if IMU.initialized:
-                current_heading = 0.5 * IMU.get_orientation() + 0.5 * DRIVE.current_pose[2]
-                IMU.orientation = current_heading
-            else:
-                current_heading = DRIVE.current_pose[2]
-            DRIVE.current_pose[2] = current_heading
-            print("Current Heading:", current_heading)
+                print(IMU.get_orientation(), DRIVE.current_pose[2])
 
             # Drive in squares
             match state:
                 case 0:
+                    print("NORTH")
                     DRIVE.set_target(np.array([0.0, 0.0, 0.0]))
                     if DRIVE.at_target():
-                        state += 1
+                        state = random.randint(0, 3)
                 case 1:
-                    DRIVE.set_target(np.array([10.0, 0.0, 90.0]))
+                    print("WEST")
+                    DRIVE.set_target(np.array([0.0, 0.0, 90.0]))
                     if DRIVE.at_target():
-                        state += 1
+                        state = random.randint(0, 3)
                 case 2:
-                    DRIVE.set_target(np.array([10.0, 10.0, 180.0]))
+                    print("SOUTH")
+                    DRIVE.set_target(np.array([0.0, 0.0, 180.0]))
                     if DRIVE.at_target():
-                        state += 1
+                        state = random.randint(0, 3)
                 case 3:
-                    DRIVE.set_target(np.array([0.0, 10.0, 270.0]))
+                    print("EAST")
+                    DRIVE.set_target(np.array([0.0, 0.0, 270.0]))
                     if DRIVE.at_target():
-                        state = 0
+                        state = random.randint(0, 3)
                 
 
                 
@@ -121,8 +121,12 @@ def main():
         pass
     finally:
         for component in ROBOT:
-            print("Releasing", component)
-            ROBOT[component].release()
+            try:
+                print("Releasing", component)
+                ROBOT[component].release()
+            except Exception as e:
+                print("Error releasing", component, e)
+                pass
         PI.stop()
         
         

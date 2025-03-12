@@ -124,7 +124,7 @@ class HallEncoder(Encoder):
         self._ticks = 0
         pass
 
-    def release(self):
+    def _release(self):
         """
         Cancels the reader and releases resources.
         """

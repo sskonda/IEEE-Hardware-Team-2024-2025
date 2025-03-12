@@ -82,6 +82,6 @@ class I2C_IMU(Component):
 
         self.last_tick = tick 
 
-    def release(self):
+    def _release(self):
         self.pi.i2c_close(self.handle)
     

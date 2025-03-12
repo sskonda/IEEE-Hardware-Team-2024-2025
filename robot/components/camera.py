@@ -22,6 +22,7 @@ APRILTAG_POSE = {
 class Camera(Component):
     def __init__(self, camera: int = 0):
         super().__init__()
+        
         self.camera_idx = camera
         self.detector = apriltag("tag36h11")
         self.detected = None

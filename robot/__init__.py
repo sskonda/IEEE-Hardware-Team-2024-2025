@@ -52,8 +52,6 @@ ROBOT = {
     "DRIVE": DRIVE,
 }
 
-ENABLED = {}
-
 def main():
     import numpy as np
     
@@ -66,14 +64,9 @@ def main():
         
         for component in ROBOT:
             print("Initializing", component)
-            if not ROBOT[component].init(PI):
-                print("Failed to initialize", component)
-                ENABLED[ROBOT[component]] = False
-            else:
-                ENABLED[ROBOT[component]] = True
+            ROBOT[component].init(PI)
 
-
-        if not ENABLED[CAMERA]: 
+        if not CAMERA.initialized: 
             ROBOT["CAMERA"].poll_for_light()
         else:
             input("Press Enter to start driving...")
@@ -83,13 +76,13 @@ def main():
         while True:
             # Update loop
             for component in ROBOT:
-                if not ENABLED[ROBOT[component]]:
+                if not ROBOT[component].initialized:
                     continue
                 print("Updating", component)
                 ROBOT[component].update()
             
             # Update heading
-            if ENABLED[IMU]:
+            if IMU.initialized:
                 current_heading = 0.5 * IMU.get_orientation() + 0.5 * DRIVE.current_pose[2]
                 IMU.orientation = current_heading
             else:

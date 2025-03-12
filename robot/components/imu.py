@@ -1,7 +1,5 @@
 import struct
 import pigpio
-import time
-from read_whoami import WHO_AM_I
 from robot.components.component import Component
 import numpy as np
 

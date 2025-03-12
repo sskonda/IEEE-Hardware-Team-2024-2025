@@ -1,14 +1,20 @@
 import pigpio
+import sys
 
 class Component():
+    def __init__(self):
+        self.initialized = False
+
     def init(self, pi: pigpio.pi) -> bool:
         """Initializes the component with the given pigpio instance
         """
         try:
-            return self._init(pi)
+            success = self._init(pi)
         except Exception as e:
             print(f"Failed to initialize component: {e}", file=sys.stderr)
-            return False
+            success = False
+        self.initialized = success
+        return success
 
     def _init(self, pi: pigpio.pi) -> bool:
         raise NotImplementedError()

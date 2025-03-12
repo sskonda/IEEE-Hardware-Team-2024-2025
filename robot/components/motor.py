@@ -56,6 +56,7 @@ class DutyMotor(Component):
 class PositionMotor(Component):
     def __init__(self):
         super().__init__()
+         
         self._desired_position = 0.0
     
     def set_position(self, position: float):
@@ -78,6 +79,7 @@ class PositionMotor(Component):
 class BrushedMotor(DutyMotor, Component):
     def __init__(self, forward_pin: int, reverse_pin: int):
         super().__init__()
+
         self._forward_pin = forward_pin
         self._reverse_pin = reverse_pin
         self.speed = 0
@@ -115,6 +117,7 @@ class BrushedMotor(DutyMotor, Component):
 class ServoMotor(PositionMotor, Component):
     def __init__(self, pin: int, period=20.0, min_pulse=0.8, max_pulse=2.2):
         super().__init__()
+
         self.pin = pin
         self.period = period
         self.resolution = 1000
@@ -151,6 +154,7 @@ class ServoMotor(PositionMotor, Component):
 class StepperMotor(PositionMotor, Component):
     def __init__(self, step_pin, direction_pin):
         super().__init__()
+
         self._step_pin = step_pin
         self._direction_pin = direction_pin
         self._step_wave = None
@@ -216,6 +220,8 @@ class StepperMotor(PositionMotor, Component):
 
 class PIDMotor(PositionMotor, SpeedMotor, Component):
     def __init__(self, duty_motor: DutyMotor, encoder: Encoder, position_pid: Optional[PID] = None, velocity_pid: Optional[PID] = None, smoothing = 0.0, max_duty=1.0):
+        super().__init__()
+
         self.duty_motor = duty_motor
         self.encoder = encoder
         self.position_pid = position_pid
@@ -264,6 +270,10 @@ class PIDMotor(PositionMotor, SpeedMotor, Component):
 
         self.duty_motor.update()
         self.encoder.update()
+    
+    def release(self):
+        self.duty_motor.release()
+        self.encoder.release()
 
     def stop(self):
         self.duty_motor.stop()

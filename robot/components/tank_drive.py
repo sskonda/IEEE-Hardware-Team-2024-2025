@@ -23,6 +23,8 @@ class TankDrive(Component):
         right_motor : PIDMotor
             The motor controlling the right side of the robot.
         """
+        super().__init__()
+
         self.left_motor = left_motor
         self.right_motor = right_motor
 

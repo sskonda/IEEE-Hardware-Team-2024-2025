@@ -94,6 +94,16 @@ class TankDrive(Component):
         """
         angle = -math.radians(self.current_heading)
         return np.array([[np.cos(angle), np.sin(angle), self.current_position[0]], [-np.sin(angle), np.cos(angle), self.current_position[1]], [0, 0, 1]])
+
+    def set_current_position(self, position):
+        self.current_position[:] = position
+    
+    def set_current_heading(self, heading):
+        self.current_heading[:] = heading
+        
+    def set_current_pose(self, position, heading):
+        self.set_current_position(position)
+        self.set_current_heading(heading)
     
     def drive_to_position(self, position: np.ndarray):
         """Sets the target pose for the robot to drive to.
@@ -116,7 +126,6 @@ class TankDrive(Component):
         drive_cmd = 0.0
         rotate_cmd = 0.0
         if not self.at_target():
-            s = ""
             if self.target_position is not None:
                 error = (self.to_robot() @ np.append(self.target_position, [1,]))[:2]
                 angle_error = math.degrees(math.atan2(error[1], error[0]))
@@ -132,14 +141,11 @@ class TankDrive(Component):
                 rotate_cmd = float(angle_error / 2.0)
             drive_cmd = clamp(drive_cmd, -40.0, 40.0)
             rotate_cmd = clamp(rotate_cmd, -40.0, 40.0)
-            s += f"Drive: {drive_cmd}\n"
-            s += f"Rotate: {rotate_cmd}"
-            print(s)
 
             right_speed = (drive_cmd + rotate_cmd)
-            right_speed += math.copysign(15.0, right_speed)
+            right_speed += math.copysign(17.5, right_speed)
             left_speed = (drive_cmd - rotate_cmd)
-            left_speed += math.copysign(15.0, left_speed)
+            left_speed += math.copysign(17.5, left_speed)
 
             self.right_motor.set_speed(right_speed)
             self.left_motor.set_speed(left_speed)

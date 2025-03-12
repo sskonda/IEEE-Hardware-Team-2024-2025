@@ -1,4 +1,3 @@
-import time
 import numpy as np
 import pigpio
 from visualizer import draw_indicator, SERVER, OUTPUT
@@ -13,7 +12,13 @@ DRIVE.init(PI)
 DRIVE.left_motor.stop()
 DRIVE.right_motor.stop()
 
-start_time = time.time()
+START = (31.25, 4.625, -90.0)
+current_position = START[:2]
+current_heading = START[2]
+
+DRIVE.current_position[:] = current_position
+DRIVE.current_heading[:] = current_heading
+
 try:
     while True:
         DRIVE.reset()

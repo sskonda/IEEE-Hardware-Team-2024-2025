@@ -1,6 +1,4 @@
 import math
-from turtle import heading
-from typing import Any
 import numpy as np
 
 from robot.components import Component
@@ -17,6 +15,9 @@ def full_pos(angle) -> float:
 
 def dist(a, b) -> float:
     return abs(pos_neg(a - b))
+
+def clamp(value, low, high):
+    return max(low, min(high, value))
 
 class TankDrive(Component):
     """
@@ -39,10 +40,13 @@ class TankDrive(Component):
         self.left_motor = left_motor
         self.right_motor = right_motor
 
-        self.pose_pid = PID(1.0, 0.0, 0.1, 0.0)
+        self.current_position = np.array([0.0, 0.0])
+        self.current_heading = np.array([0.0])
 
-        self.current_pose = np.array([0.0, 0.0, 0.0])
-        self.target_pose = np.array([0.0, 0.0, 0.0])
+        self.target_position = None
+        self.target_heading = None
+        self.position_tolerance = 1.0
+        self.heading_tolerance = 5.0
 
     def _init(self, pi):
         success = self.left_motor.init(pi) and self.right_motor.init(pi)
@@ -53,7 +57,6 @@ class TankDrive(Component):
         ])
 
         return success
-
 
     def to_robot(self):
         """
@@ -89,10 +92,10 @@ class TankDrive(Component):
         numpy.ndarray
             The vector in the global frame.
         """
-        angle = -math.radians(self.current_pose[2])
-        return np.array([[np.cos(angle), np.sin(angle), self.current_pose[0]], [-np.sin(angle), np.cos(angle), self.current_pose[1]], [0, 0, 1]])
+        angle = -math.radians(self.current_heading)
+        return np.array([[np.cos(angle), np.sin(angle), self.current_position[0]], [-np.sin(angle), np.cos(angle), self.current_position[1]], [0, 0, 1]])
     
-    def set_target(self, pose: np.ndarray):
+    def drive_to_position(self, position: np.ndarray):
         """Sets the target pose for the robot to drive to.
 
         Parameters
@@ -100,40 +103,49 @@ class TankDrive(Component):
         pose : np.ndarray
             [x, y, theta] pose to drive to. [in, in, deg]
         """
-        self.target_pose = pose
-        self.pose_pid.setpoint = pose
+        self.target_position = position
+        self.target_heading = None
+    
+    def drive_to_heading(self, heading: float):
+        self.target_position = None
+        self.target_heading = heading
 
     def update(self):
-        error = (self.to_robot() @ np.append(self.target_pose[:2], [1,]))[:2]
-        
         # Do translation
-        s = ""
-        # print("Error", error)
-        # distance = float(np.linalg.norm(error))
-        # if distance > 1.0:  # precision in inches
-        #     phi = math.degrees(math.atan2(error[1], error[0]))
-        #     if dist(phi, 180.0) < 15.0:
-        #         s += "Reversing\n"
-        #         drive_cmd = -distance - 15.0
-        #         rotate_cmd = pos_neg(phi - 180.0)
-        #     elif dist(phi, 0.0) < 15.0:  # precision in degrees
-        #         s += "Driving\n"
-        #         drive_cmd = distance + 15.0
-        #         rotate_cmd = phi
-        #     else:
-        #         s += "Turning\n"
-        #         drive_cmd = 0.0
-        #         rotate_cmd = phi
-        # else:
-        #     s += "Done\n"
-        drive_cmd = 0.0
-        rotate_cmd = pos_neg(self.target_pose[2] - self.current_pose[2])
 
-        s += f"Drive: {drive_cmd}\n"
-        s += f"Rotate: {rotate_cmd}"
-        print(s)
-        self.right_motor.set_speed(drive_cmd + rotate_cmd)
-        self.left_motor.set_speed(drive_cmd - rotate_cmd)
+        drive_cmd = 0.0
+        rotate_cmd = 0.0
+        if not self.at_target():
+            s = ""
+            if self.target_position is not None:
+                error = (self.to_robot() @ np.append(self.target_position, [1,]))[:2]
+                angle_error = math.degrees(math.atan2(error[1], error[0]))
+
+                drive_cmd = error[0]
+                if drive_cmd > 0:
+                    rotate_cmd = pos_neg(angle_error)
+                else:
+                    rotate_cmd = pos_neg(angle_error - 180.0)
+            elif self.target_heading is not None:
+                angle_error = pos_neg(self.target_heading - self.current_heading)
+                drive_cmd = 0.0
+                rotate_cmd = float(angle_error / 2.0)
+            drive_cmd = clamp(drive_cmd, -40.0, 40.0)
+            rotate_cmd = clamp(rotate_cmd, -40.0, 40.0)
+            s += f"Drive: {drive_cmd}\n"
+            s += f"Rotate: {rotate_cmd}"
+            print(s)
+
+            right_speed = (drive_cmd + rotate_cmd)
+            right_speed += math.copysign(15.0, right_speed)
+            left_speed = (drive_cmd - rotate_cmd)
+            left_speed += math.copysign(15.0, left_speed)
+
+            self.right_motor.set_speed(right_speed)
+            self.left_motor.set_speed(left_speed)
+        else:
+            self.right_motor.set_speed(0.0)
+            self.left_motor.set_speed(0.0)
         
         # Do inverse kinematics
         angles = np.array([
@@ -152,13 +164,14 @@ class TankDrive(Component):
         A, B = d_wheel_arc_length
         d_theta = math.degrees((B - A) / DRIVE_WHEEL_SPACING)
 
-        self.current_pose[:2] += -np.mean(d_wheel_distance) * np.array([np.cos(math.radians(self.current_pose[2])), np.sin(math.radians(self.current_pose[2]))])
-        self.current_pose[2] += d_theta
+        # TODO: Implement arc-based position update
+        self.current_position += -np.mean(d_wheel_distance) * np.array([np.cos(math.radians(self.current_heading)), np.sin(math.radians(self.current_heading))])
+        self.current_heading += d_theta
             
         self.right_motor.update()
         self.left_motor.update()
 
-    def at_target(self, position_tolerance=2.0, heading_tolerance=1.0):
+    def at_target(self):
         """
         Returns True if the robot is at the target pose.
 
@@ -167,9 +180,9 @@ class TankDrive(Component):
         bool
             True if the robot is at the target pose.
         """
-        position_done = np.linalg.norm(self.current_pose[:2] - self.target_pose[:2]) < position_tolerance
-        heading_done = dist(self.current_pose[2], self.target_pose[2]) < heading_tolerance
-        return heading_done
+        position_done = self.target_position is None or np.linalg.norm(self.current_position - self.target_position) < self.position_tolerance
+        heading_done = self.target_heading is None or dist(self.current_heading, self.target_heading) < self.heading_tolerance
+        return position_done and heading_done
     
     def _release(self):
         """Releases the motors."""
@@ -177,7 +190,6 @@ class TankDrive(Component):
         self.right_motor.release()
 
     def reset(self):    
-        self.pose_pid.reset()
         self.right_motor.pid().reset()
         self.left_motor.pid().reset()
 

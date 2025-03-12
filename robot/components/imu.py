@@ -22,10 +22,10 @@ class I2C_IMU(Component):
         
         self.acceleration = np.array([0.0, 0.0])
         self.velocity = np.array([0.0, 0.0])
-        self.position = np.array([0.0, 0.0])
+        self.current_position = np.array([0.0, 0.0])
 
         self.angular_velocity = np.array([0.0])
-        self.orientation = np.array([0.0])
+        self.current_heading = np.array([0.0])
 
     def _init(self, pi):
         self.pi = pi
@@ -60,13 +60,13 @@ class I2C_IMU(Component):
         return self.velocity
     
     def get_position(self):
-        return self.position
+        return self.current_position
 
     def get_angular_velocity(self):
         return self.angular_velocity
 
     def get_orientation(self):
-        return self.orientation
+        return self.current_heading
 
     def update(self):
         tick = self.pi.get_current_tick()
@@ -75,10 +75,10 @@ class I2C_IMU(Component):
             
         dt = pigpio.tickDiff(self.last_tick, tick) / 1_000_000.0
 
-        self.position += (self.velocity + 0.5 * self.acceleration) * dt # Trapezoidal integration
+        self.current_position += (self.velocity + 0.5 * self.acceleration) * dt # Trapezoidal integration
         self.velocity += self.acceleration * dt
         
-        self.orientation += self.angular_velocity * dt
+        self.current_heading += self.angular_velocity * dt
 
         self.last_tick = tick 
 

@@ -1,47 +1,54 @@
-import math
-import cv2
 import time
 import numpy as np
 import pigpio
 from visualizer import draw_indicator, SERVER, OUTPUT
-from robot.components import TankDrive
-from robot import RIGHT_PID_MOTOR, LEFT_PID_MOTOR
+from robot import DRIVE
 
 PI = pigpio.pi()
 SERVER.start()
 PI.wave_clear()
 
-drive = TankDrive(LEFT_PID_MOTOR, RIGHT_PID_MOTOR)
-drive.init(PI)
+DRIVE.init(PI)
 
-drive.left_motor.stop()
-drive.right_motor.stop()
-
-drive.pose_pid.reset()
+DRIVE.left_motor.stop()
+DRIVE.right_motor.stop()
 
 start_time = time.time()
 try:
     while True:
-        drive.reset()
-        drive.set_target(np.array([float(val) for val in input("Enter x y heading: ").split()]))
+        DRIVE.reset()
+
+        x, y, heading = (float(val) for val in input("Enter x y heading: ").split())
+        DRIVE.drive_to_position(np.array([x, y]))
 
         try:
             while True:
-                drive.update()
+                DRIVE.update()
 
                 bg = np.zeros((500, 500, 3), np.uint8)
-
-                robot = draw_indicator(bg, drive.current_pose[:2], drive.current_pose[2], color=(255, 0, 0))
-                target = draw_indicator(robot, drive.target_pose[:2], drive.target_pose[2], color=(0, 255, 0))
-                error = (drive.to_robot() @ np.append(drive.target_pose[:2], [1,]))[:2]
-                error = draw_indicator(target, drive.current_pose[:2], math.degrees(np.arctan2(error[1], error[0])) + drive.current_pose[2], color=(0, 0, 255))
+                robot = draw_indicator(bg, DRIVE.current_position, DRIVE.current_heading, color=(255, 0, 0))
+                target = draw_indicator(
+                    robot,
+                    np.array([x, y]),
+                    heading,
+                    color=(0, 255, 0)
+                )
 
                 OUTPUT.write(target)
+
+                if DRIVE.at_target():
+                    if DRIVE.target_position is not None:
+                        print("At target position.")
+                        DRIVE.drive_to_heading(heading)
+                    else:
+                        print("At target heading.")
+                        DRIVE.stop()
+                        break
         except KeyboardInterrupt:
-            drive.stop()
+            DRIVE.stop()
             print()
 except KeyboardInterrupt:
-    drive.stop()
+    DRIVE.stop()
 finally:
-    drive.stop()
+    DRIVE.stop()
     PI.stop()

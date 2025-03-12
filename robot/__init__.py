@@ -1,6 +1,6 @@
+import numpy as np
 import pigpio
 
-import random
 from .pid import PID
 from .constants import *
 from .components import *
@@ -52,28 +52,72 @@ ROBOT = {
     "IMU": IMU,
 }
 
-def main():
-    import numpy as np
+class Action:
+    def __init__(self, start, repeated, is_finished):
+        self.start = start
+        self.repeated = repeated
+        self.is_finished = is_finished
+        
+    def __call__(self):
+        if self.start:
+            self.start()
+            self.start = None
+        if self.repeated:
+            self.repeated()
+        if self.is_finished:
+            return self.is_finished()
+        return False
+
+START = (31.25, 4.625, -90.0)
+WAYPOINTS = (
+    Action(lambda: DRIVE.drive_to_position(np.array([31.25, 19.5])), None, DRIVE.at_target),  # Back out of start
+    Action(lambda: DRIVE.drive_to_heading(0.0), None, DRIVE.at_target),  # Turn to face bins
+    Action(lambda: DRIVE.drive_to_position(np.array([52.0, 19.5])), None, DRIVE.at_target),  # Drive to first bin
+
+    ## DO ARM STUFF TO GRAB BIN
     
+    Action(lambda: DRIVE.drive_to_position(np.array([22.63, 22.88])), None, DRIVE.at_target),  # Drive to second bin
+    Action(lambda: DRIVE.drive_to_heading(-90.0), None, DRIVE.at_target),  # Turn to face wall
+    
+    ## Drive into the wall
+    ## Reset position and heading to (22.63, 34.375, -90.0)
+    ## Close the clamp
+
+    # Lawnmower pattern
+)
+
+def main():
     PI = pigpio.pi()
     PI.wave_clear()
 
     try:
         # Wait for start signal
-        # input("Press Enter to start...")
+        input("Press Enter to start...")
         
         for component in ROBOT:
             print("Initializing", component)
             ROBOT[component].init(PI)
 
+        if not DRIVE.initialized:
+            raise Exception("Drive failed to initialize, exiting...")
+
         if CAMERA.initialized: 
             CAMERA.poll_for_light()
         else:
-            # input("Press Enter to start driving...")
+            input("Press Enter to start driving...")
             pass
 
-        current_heading = 0.0
+
+        current_position = START[:2]
+        current_heading = START[2]
+
+        DRIVE.current_position = current_position
+        DRIVE.current_heading = current_heading
+        IMU.current_position = current_position
+        IMU.current_heading = current_heading
+
         state = 0
+
         while True:
             # Update loop
             for component in ROBOT:
@@ -81,37 +125,26 @@ def main():
                     continue
                 ROBOT[component].update()
             
-            # Update heading
+            # Update pose
             if IMU.initialized:
-                print(IMU.get_orientation(), DRIVE.current_pose[2])
                 current_heading = IMU.get_orientation()
+            else:
+                # Fallback to odometry
+                current_heading = DRIVE.current_heading
 
-            if DRIVE.initialized:
-                # current_heading = 0.5 * DRIVE.current_pose[2] + 0.5 * current_heading
-                DRIVE.current_pose[2] = current_heading
-                # Drive in squares
-                match state:
-                    case 0:
-                        print("NORTH")
-                        DRIVE.set_target(np.array([0.0, 0.0, 0.0]))
-                        if DRIVE.at_target():
-                            state = random.randint(0, 3)
-                    case 1:
-                        print("WEST")
-                        DRIVE.set_target(np.array([0.0, 0.0, 90.0]))
-                        if DRIVE.at_target():
-                            state = random.randint(0, 3)
-                    case 2:
-                        print("SOUTH")
-                        DRIVE.set_target(np.array([0.0, 0.0, 180.0]))
-                        if DRIVE.at_target():
-                            state = random.randint(0, 3)
-                    case 3:
-                        print("EAST")
-                        DRIVE.set_target(np.array([0.0, 0.0, 270.0]))
-                        if DRIVE.at_target():
-                            state = random.randint(0, 3)
-    except KeyboardInterrupt:
+            current_position = DRIVE.current_position
+            DRIVE.current_heading = current_heading
+
+            # Execute action
+            if state < len(WAYPOINTS):
+                if WAYPOINTS[state]():
+                    # Move to next state
+                    state += 1
+            else:
+                print("Finished!")
+                break
+            
+    except Exception as e:
         pass
     finally:
         for component in ROBOT:
@@ -120,7 +153,7 @@ def main():
                 ROBOT[component].release()
             except Exception as e:
                 print("Error releasing", component, e)
-                pass
-        PI.stop()
+            finally:
+                PI.stop()
         
         

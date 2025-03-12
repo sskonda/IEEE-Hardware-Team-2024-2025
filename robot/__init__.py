@@ -1,5 +1,8 @@
+from operator import is_
+import time
 import numpy as np
 import pigpio
+from responses import start
 
 from .pid import PID
 from .constants import *
@@ -14,8 +17,20 @@ LEFT_DRIVE_ENCODER = HallEncoder(14, 15, 1200)  # Left Drive Encoder
 RIGHT = (RIGHT_DRIVE_MOTOR, RIGHT_DRIVE_ENCODER)
 LEFT = (LEFT_DRIVE_MOTOR, LEFT_DRIVE_ENCODER)
 
-RIGHT_PID_MOTOR = PIDMotor(*RIGHT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.005, 0.015, 0.0, 0.0), smoothing=0.1, max_duty=DRIVE_SPEED)
-LEFT_PID_MOTOR = PIDMotor(*LEFT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.005, 0.015, 0.0, 0.0), smoothing=0.1, max_duty=DRIVE_SPEED)
+RIGHT_PID_MOTOR = PIDMotor(
+    *RIGHT,
+    position_pid=PID(1 / 60, 0, 0.1, 0.1),
+    velocity_pid=PID(0.005, 0.015, 0.0, 0.0),
+    smoothing=0.1,
+    max_duty=DRIVE_SPEED
+)
+LEFT_PID_MOTOR = PIDMotor(
+    *LEFT,
+    position_pid=PID(1 / 60, 0, 0.1, 0.1),
+    velocity_pid=PID(0.005, 0.015, 0.0, 0.0),
+    smoothing=0.1,
+    max_duty=DRIVE_SPEED
+)
 
 CAMERA = Camera()
 IMU = I2C_IMU()
@@ -52,39 +67,133 @@ ROBOT = {
     "IMU": IMU,
 }
 
+s = {}
+
+
 class Action:
-    def __init__(self, start, repeated, is_finished):
+    def __init__(self, start=None, is_finished=None, repeated=None, end=None):
         self.start = start
+        self.end = end
         self.repeated = repeated
         self.is_finished = is_finished
-        
+
+        self.done = False
+
     def __call__(self):
-        if self.start:
-            self.start()
-            self.start = None
-        if self.repeated:
-            self.repeated()
-        if self.is_finished:
-            return self.is_finished()
-        return False
+        if not self.done:
+            if self.start:
+                self.start()
+                self.start = None
+            if self.repeated:
+                self.repeated()
+            if self.is_finished:
+                self.done = self.is_finished()
+            if self.done and self.end:
+                self.end()
+        return self.done
+
 
 START = (31.25, 4.625, -90.0)
+
+
+def DriveTimeout(direction, duration, **kwargs):
+    s = {}
+
+    _start = kwargs.pop("start", None)
+    _is_finished = kwargs.pop("is_finished", None)
+    _repeated = kwargs.pop("repeated", None)
+
+    if _start is not None:
+
+        def start():
+            _start()
+            s["start_time"] = time.time()
+
+    else:
+
+        def start():
+            s["start_time"] = time.time()
+
+    if _repeated is not None:
+
+        def repeated():
+            _repeated()
+            DRIVE.drive_to_position(DRIVE.current_position + direction)
+
+    else:
+
+        def repeated():
+            DRIVE.drive_to_position(DRIVE.current_position + direction)
+
+    if _is_finished is not None:
+
+        def is_finished():
+            return _is_finished() and (time.time() - s["start_time"] > duration)
+
+    else:
+
+        def is_finished():
+            return time.time() - s["start_time"] > duration
+
+    return Action(start=start, is_finished=is_finished, repeated=repeated, **kwargs)
+
+
+def DriveToPosition(position, **kwargs):
+    _start = kwargs.pop("start", None)
+    _is_finished = kwargs.pop("is_finished", None)
+
+    if _start is not None:
+
+        def start():
+            _start()
+            DRIVE.drive_to_position(position)
+
+    else:
+
+        def start():
+            DRIVE.drive_to_position(position)
+
+    if _is_finished is not None:
+        is_finished = lambda: _is_finished() and DRIVE.at_target()
+    else:
+        is_finished = DRIVE.at_target
+
+    return Action(start=start, is_finished=is_finished, **kwargs)
+
+
+def DriveToHeading(heading, **kwargs):
+    _start = kwargs.pop("start", None)
+    _is_finished = kwargs.pop("is_finished", None)
+
+    if _start is not None:
+
+        def start():
+            _start()
+            DRIVE.drive_to_heading(heading)
+
+    else:
+
+        def start():
+            DRIVE.drive_to_heading(heading)
+
+    if _is_finished is not None:
+        is_finished = lambda: _is_finished() and DRIVE.at_target()
+    else:
+        is_finished = DRIVE.at_target
+
+    return Action(start=start, is_finished=is_finished, **kwargs)
+
+
 WAYPOINTS = (
-    Action(lambda: DRIVE.drive_to_position(np.array([31.25, 19.5])), None, DRIVE.at_target),  # Back out of start
-    Action(lambda: DRIVE.drive_to_heading(0.0), None, DRIVE.at_target),  # Turn to face bins
-    Action(lambda: DRIVE.drive_to_position(np.array([52.0, 19.5])), None, DRIVE.at_target),  # Drive to first bin
-
+    DriveToPosition([31.25, 19.5]),  # Back out of start
+    DriveToHeading(0.0),  # Turn to face bins
+    DriveToPosition([50.0, 19.5]),  # Drive to first bin
     ## DO ARM STUFF TO GRAB BIN
-    
-    Action(lambda: DRIVE.drive_to_position(np.array([22.63, 22.88])), None, DRIVE.at_target),  # Drive to second bin
-    Action(lambda: DRIVE.drive_to_heading(-90.0), None, DRIVE.at_target),  # Turn to face wall
-    
-    ## Drive into the wall
-    ## Reset position and heading to (22.63, 34.375, -90.0)
-    ## Close the clamp
-
-    # Lawnmower pattern
+    DriveToPosition([22.63, 22.88]),  # Drive to second bin
+    DriveToHeading(-90.0),  # Turn to face wall
+    DriveTimeout([0.0, 10.0], 2.0, end=lambda: DRIVE.set_current_pose([22.63, 34.375], 90.0)),  # Drive to wall
 )
+
 
 def main():
     PI = pigpio.pi()
@@ -93,7 +202,7 @@ def main():
     try:
         # Wait for start signal
         input("Press Enter to start...")
-        
+
         for component in ROBOT:
             print("Initializing", component)
             ROBOT[component].init(PI)
@@ -101,20 +210,19 @@ def main():
         if not DRIVE.initialized:
             raise Exception("Drive failed to initialize, exiting...")
 
-        if CAMERA.initialized: 
+        if CAMERA.initialized:
             CAMERA.poll_for_light()
         else:
             input("Press Enter to start driving...")
             pass
 
-
         current_position = START[:2]
         current_heading = START[2]
 
-        DRIVE.current_position = current_position
-        DRIVE.current_heading = current_heading
-        IMU.current_position = current_position
-        IMU.current_heading = current_heading
+        DRIVE.current_position[:] = current_position
+        DRIVE.current_heading[:] = current_heading
+        IMU.current_position[:] = current_position
+        IMU.current_heading[:] = current_heading
 
         state = 0
 
@@ -124,7 +232,7 @@ def main():
                 if not ROBOT[component].initialized:
                     continue
                 ROBOT[component].update()
-            
+
             # Update pose
             if IMU.initialized:
                 current_heading = IMU.get_orientation()
@@ -138,12 +246,13 @@ def main():
             # Execute action
             if state < len(WAYPOINTS):
                 if WAYPOINTS[state]():
+                    print(DRIVE.current_position, DRIVE.current_heading)
                     # Move to next state
                     state += 1
             else:
                 print("Finished!")
                 break
-            
+
     except Exception as e:
         pass
     finally:
@@ -155,5 +264,3 @@ def main():
                 print("Error releasing", component, e)
             finally:
                 PI.stop()
-        
-        

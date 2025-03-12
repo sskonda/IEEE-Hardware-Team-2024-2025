@@ -37,20 +37,19 @@ STARBOARD_ULTRASONIC = Ultrasonic(4, 17)  # Starboard-Side Ultrasonic
 AFT_ULTRASONIC = Ultrasonic(27, 22)  # Aft-Side Ultrasonic
 
 ROBOT = {
+    # "INTAKE_MOTOR": INTAKE_MOTOR,
+    # "INTAKE_ENCODER": INTAKE_ENCODER,
+    # "CLAMP_MOTOR": CLAMP_MOTOR,
+    # "CLAMP_ENCODER": CLAMP_ENCODER,
+    # "BIN_LIFT_STEPPER": BIN_LIFT_STEPPER,
+    # "BEACON_SERVO": BEACON_SERVO,
+    # "MISC_SERVO": MISC_SERVO,
+    # "PORT_ULTRASONIC": PORT_ULTRASONIC,
+    # "STARBOARD_ULTRASONIC": STARBOARD_ULTRASONIC,
+    # "AFT_ULTRASONIC": AFT_ULTRASONIC,
+    # "CAMERA": CAMERA,
     "DRIVE": DRIVE,
     "IMU": IMU,
-    "INTAKE_MOTOR": INTAKE_MOTOR,
-    "INTAKE_ENCODER": INTAKE_ENCODER,
-    "CLAMP_MOTOR": CLAMP_MOTOR,
-    "CLAMP_ENCODER": CLAMP_ENCODER,
-    "BIN_LIFT_STEPPER": BIN_LIFT_STEPPER,
-    "BEACON_SERVO": BEACON_SERVO,
-    "MISC_SERVO": MISC_SERVO,
-    "PORT_ULTRASONIC": PORT_ULTRASONIC,
-    "STARBOARD_ULTRASONIC": STARBOARD_ULTRASONIC,
-    "AFT_ULTRASONIC": AFT_ULTRASONIC,
-    "CAMERA": CAMERA,
-    "DRIVE": DRIVE,
 }
 
 def main():
@@ -85,38 +84,33 @@ def main():
             # Update heading
             if IMU.initialized:
                 print(IMU.get_orientation(), DRIVE.current_pose[2])
+                current_heading = IMU.get_orientation()
 
-            # Drive in squares
-            match state:
-                case 0:
-                    print("NORTH")
-                    DRIVE.set_target(np.array([0.0, 0.0, 0.0]))
-                    if DRIVE.at_target():
-                        state = random.randint(0, 3)
-                case 1:
-                    print("WEST")
-                    DRIVE.set_target(np.array([0.0, 0.0, 90.0]))
-                    if DRIVE.at_target():
-                        state = random.randint(0, 3)
-                case 2:
-                    print("SOUTH")
-                    DRIVE.set_target(np.array([0.0, 0.0, 180.0]))
-                    if DRIVE.at_target():
-                        state = random.randint(0, 3)
-                case 3:
-                    print("EAST")
-                    DRIVE.set_target(np.array([0.0, 0.0, 270.0]))
-                    if DRIVE.at_target():
-                        state = random.randint(0, 3)
-                
-
-                
-
-                
-            
-            
-        
-            
+            if DRIVE.initialized:
+                # current_heading = 0.5 * DRIVE.current_pose[2] + 0.5 * current_heading
+                DRIVE.current_pose[2] = current_heading
+                # Drive in squares
+                match state:
+                    case 0:
+                        print("NORTH")
+                        DRIVE.set_target(np.array([0.0, 0.0, 0.0]))
+                        if DRIVE.at_target():
+                            state = random.randint(0, 3)
+                    case 1:
+                        print("WEST")
+                        DRIVE.set_target(np.array([0.0, 0.0, 90.0]))
+                        if DRIVE.at_target():
+                            state = random.randint(0, 3)
+                    case 2:
+                        print("SOUTH")
+                        DRIVE.set_target(np.array([0.0, 0.0, 180.0]))
+                        if DRIVE.at_target():
+                            state = random.randint(0, 3)
+                    case 3:
+                        print("EAST")
+                        DRIVE.set_target(np.array([0.0, 0.0, 270.0]))
+                        if DRIVE.at_target():
+                            state = random.randint(0, 3)
     except KeyboardInterrupt:
         pass
     finally:

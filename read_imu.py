@@ -51,7 +51,7 @@ def main():
             print("Position:", position)
             print("Heading (yaw):", heading, "degrees")
 
-            robot = draw_indicator(origin, position, heading, color=(255, 0, 0))
+            robot = draw_indicator(origin, np.zeros(2), heading, color=(255, 0, 0))
             OUTPUT.write(robot)
     except KeyboardInterrupt:
         pass

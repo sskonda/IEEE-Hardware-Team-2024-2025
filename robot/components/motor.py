@@ -82,7 +82,7 @@ class BrushedMotor(DutyMotor, Component):
         self._reverse_pin = reverse_pin
         self.speed = 0
     
-    def init(self, pi):
+    def _init(self, pi):
         self.pi = pi
         self.pi.set_mode(self._forward_pin, pigpio.OUTPUT)
         self.pi.set_mode(self._reverse_pin, pigpio.OUTPUT)
@@ -121,7 +121,7 @@ class ServoMotor(PositionMotor, Component):
         self.min_pulse = min_pulse
         self.max_pulse = max_pulse
     
-    def init(self, pi):
+    def _init(self, pi):
         self.pi = pi
         self.pi.set_mode(self.pin, pigpio.OUTPUT)
         
@@ -157,7 +157,7 @@ class StepperMotor(PositionMotor, Component):
         self._forward_wave = None
         self._backward_wave = None
         
-    def init(self, pi):
+    def _init(self, pi):
         self.pi = pi
         self.pi.set_mode(self._step_pin, pigpio.OUTPUT)
         self.pi.set_mode(self._direction_pin, pigpio.OUTPUT)
@@ -232,7 +232,7 @@ class PIDMotor(PositionMotor, SpeedMotor, Component):
         else:
             raise ValueError("Either position or velocity PID must be set")
 
-    def init(self, pi):
+    def _init(self, pi):
         return self.duty_motor.init(pi) and self.encoder.init(pi)
 
         

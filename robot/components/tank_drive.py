@@ -7,7 +7,7 @@ from ..pid import PID
 from ..constants import DRIVE_WHEEL_DIAMETER, DRIVE_WHEEL_OFFTANGENT, DRIVE_WHEEL_SPACING
 from .motor import PIDMotor
 
-class TankDrive():
+class TankDrive(Component):
     """
     Controls a robot with tank drive movement using two brushed motors.
     """
@@ -31,7 +31,7 @@ class TankDrive():
         self.current_pose = np.array([0.0, 0.0, 0.0])
         self.target_pose = np.array([0.0, 0.0, 0.0])
 
-    def init(self, pi):
+    def _init(self, pi):
         success = self.left_motor.init(pi) and self.right_motor.init(pi)
         
         self.__last_wheel_angles = np.array([
@@ -79,12 +79,6 @@ class TankDrive():
         angle = -math.radians(self.current_pose[2])
         return np.array([[np.cos(angle), np.sin(angle), self.current_pose[0]], [-np.sin(angle), np.cos(angle), self.current_pose[1]], [0, 0, 1]])
     
-    def update_position(self, pose: np.ndarray, weight: float = 0.1):
-        self.current_pose[:2] = weight * pose[:2] + (1 - weight) * self.current_pose[:2]
-
-    def update_heading(self, heading: float, weight: float = 0.1):
-        self.current_pose[2] = weight * heading + (1 - weight) * self.current_pose[2]
-
     def set_target(self, pose: np.ndarray):
         """Sets the target pose for the robot to drive to.
 
@@ -149,6 +143,22 @@ class TankDrive():
             
         self.right_motor.update()
         self.left_motor.update()
+
+    def at_target(self, position_tolerance=0.1, heading_tolerance=1.0):
+        """
+        Returns True if the robot is at the target pose.
+
+        Returns
+        -------
+        bool
+            True if the robot is at the target pose.
+        """
+        return np.linalg.norm(self.current_pose[:2] - self.target_pose[:2]) < position_tolerance and abs(self.current_pose[2] - self.target_pose[2]) < heading_tolerance
+    
+    def release(self):
+        """Releases the motors."""
+        self.left_motor.release()
+        self.right_motor.release()
 
     def reset(self):    
         self.pose_pid.reset()

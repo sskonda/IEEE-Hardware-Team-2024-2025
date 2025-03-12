@@ -17,7 +17,7 @@ RIGHT_PID_MOTOR = PIDMotor(*RIGHT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity
 LEFT_PID_MOTOR = PIDMotor(*LEFT, position_pid=PID(1/60, 0, 0.1, 0.1), velocity_pid=PID(0.005, 0.015, 0.0, 0.0), smoothing=0.1, max_duty=DRIVE_SPEED)
 
 CAMERA = Camera()
-IMU = IMU()
+IMU = I2C_IMU()
 DRIVE = TankDrive(LEFT_PID_MOTOR, RIGHT_PID_MOTOR)
 
 INTAKE_MOTOR = BrushedMotor(26, 11)  # Intake Motor
@@ -48,9 +48,11 @@ ROBOT = {
     "PORT_ULTRASONIC": PORT_ULTRASONIC,
     "STARBOARD_ULTRASONIC": STARBOARD_ULTRASONIC,
     "AFT_ULTRASONIC": AFT_ULTRASONIC,
-    # "CAMERA": CAMERA,
+    "CAMERA": CAMERA,
     "DRIVE": DRIVE,
 }
+
+ENABLED = {}
 
 def main():
     import numpy as np
@@ -66,29 +68,61 @@ def main():
             print("Initializing", component)
             if not ROBOT[component].init(PI):
                 print("Failed to initialize", component)
-                ROBOT[component] = None
+                ENABLED[ROBOT[component]] = False
+            else:
+                ENABLED[ROBOT[component]] = True
 
-        if ROBOT["CAMERA"] is not None:
+
+        if not ENABLED[CAMERA]: 
             ROBOT["CAMERA"].poll_for_light()
         else:
             input("Press Enter to start driving...")
 
+        current_heading = 0.0
+        state = 0
         while True:
+            # Update loop
             for component in ROBOT:
+                if not ENABLED[ROBOT[component]]:
+                    continue
                 print("Updating", component)
                 ROBOT[component].update()
             
+            # Update heading
+            if ENABLED[IMU]:
+                current_heading = 0.5 * IMU.get_orientation() + 0.5 * DRIVE.current_pose[2]
+                IMU.orientation = current_heading
+            else:
+                current_heading = DRIVE.current_pose[2]
+            DRIVE.current_pose[2] = current_heading
+            print("Current Heading:", current_heading)
 
-        # DRIVE.reset()
-        # DRIVE.current_pose = np.array([0.0, 0.0, 0.0])
+            # Drive in squares
+            match state:
+                case 0:
+                    DRIVE.set_target(np.array([0.0, 0.0, 0.0]))
+                    if DRIVE.at_target():
+                        state += 1
+                case 1:
+                    DRIVE.set_target(np.array([10.0, 0.0, 90.0]))
+                    if DRIVE.at_target():
+                        state += 1
+                case 2:
+                    DRIVE.set_target(np.array([10.0, 10.0, 180.0]))
+                    if DRIVE.at_target():
+                        state += 1
+                case 3:
+                    DRIVE.set_target(np.array([0.0, 10.0, 270.0]))
+                    if DRIVE.at_target():
+                        state = 0
+                
 
-        # DRIVE.set_target(np.array([-5.0, 0.0, -90.0]))
-        # while True:
-        #     CAMERA.update()
+                
+
+                
             
-        #     DRIVE.update()
-
             
+        
             
     except KeyboardInterrupt:
         pass

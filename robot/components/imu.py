@@ -11,7 +11,7 @@ WHO_AM_I_ADDRESS = 0x75
 WHO_AM_I = 0x70
 
 
-class IMU(Component):
+class I2C_IMU(Component):
     def __init__(self, device_address=0x68, bus=1):
         super().__init__()
         self.device_address = device_address
@@ -29,7 +29,7 @@ class IMU(Component):
         self.angular_velocity = np.array([0.0])
         self.orientation = np.array([0.0])
 
-    def init(self, pi):
+    def _init(self, pi):
         self.pi = pi
         self.handle = pi.i2c_open(self.bus, self.device_address)
         

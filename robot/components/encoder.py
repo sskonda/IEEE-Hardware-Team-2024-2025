@@ -4,7 +4,7 @@ import pigpio
 
 
 class Encoder(Component):
-    def init(self, pi):
+    def _init(self, pi):
         """Initializes the encoder
 
         Raises
@@ -64,7 +64,7 @@ class HallEncoder(Encoder):
 
         self._ticks = 0
     
-    def init(self, pi: pigpio.pi) -> bool:
+    def _init(self, pi: pigpio.pi) -> bool:
         self.pi = pi
         self.pi.set_mode(self._sin_pin, pigpio.INPUT)
         self.pi.set_mode(self._cos_pin, pigpio.INPUT)

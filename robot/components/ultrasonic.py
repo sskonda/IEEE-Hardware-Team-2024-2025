@@ -15,7 +15,7 @@ class Ultrasonic(Component):
         self._high_tick = None
         self._period = None
 
-    def init(self, pi):
+    def _init(self, pi):
         self.pi = pi
         self.pi.set_mode(self._trigger_pin, pigpio.OUTPUT)
         self.pi.set_mode(self._echo_pin, pigpio.INPUT)

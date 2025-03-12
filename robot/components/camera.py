@@ -27,7 +27,7 @@ class Camera(Component):
         self.detected = None
         self.pose_matrix = None
     
-    def init(self, pi):
+    def _init(self, pi):
         try:
             self.picam2 = picamera2.Picamera2(self.camera_idx)
             self.load_calibration()

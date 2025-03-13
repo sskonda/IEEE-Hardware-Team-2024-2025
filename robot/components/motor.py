@@ -76,6 +76,7 @@ class PositionMotor(Component):
         self.set_position(self.get_desired_position() + delta)    
 
 
+
 class BrushedMotor(DutyMotor, Component):
     def __init__(self, forward_pin: int, reverse_pin: int):
         super().__init__()

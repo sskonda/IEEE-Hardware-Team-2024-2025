@@ -54,15 +54,15 @@ AFT_ULTRASONIC = Ultrasonic(27, 22)  # Aft-Side Ultrasonic
 ROBOT = {
     # "INTAKE_MOTOR": INTAKE_MOTOR,
     # "INTAKE_ENCODER": INTAKE_ENCODER,
-    # "CLAMP_MOTOR": CLAMP_MOTOR,
-    # "CLAMP_ENCODER": CLAMP_ENCODER,
-    # "BIN_LIFT_STEPPER": BIN_LIFT_STEPPER,
-    # "BEACON_SERVO": BEACON_SERVO,
+    "CLAMP_MOTOR": CLAMP_MOTOR,
+    "CLAMP_ENCODER": CLAMP_ENCODER,
+    "BIN_LIFT_STEPPER": BIN_LIFT_STEPPER,
+    "BEACON_SERVO": BEACON_SERVO,
     # "MISC_SERVO": MISC_SERVO,
     # "PORT_ULTRASONIC": PORT_ULTRASONIC,
     # "STARBOARD_ULTRASONIC": STARBOARD_ULTRASONIC,
     # "AFT_ULTRASONIC": AFT_ULTRASONIC,
-    # "CAMERA": CAMERA,
+    "CAMERA": CAMERA,
     "DRIVE": DRIVE,
     "IMU": IMU,
 }
@@ -138,7 +138,7 @@ def DriveTimeout(direction, duration, **kwargs):
     return Action(start=start, is_finished=is_finished, repeated=repeated, **kwargs)
 
 
-def DriveToPosition(position, **kwargs):
+def DriveToPosition(position, tolerance=1.0, **kwargs):
     _start = kwargs.pop("start", None)
     _is_finished = kwargs.pop("is_finished", None)
 
@@ -146,12 +146,12 @@ def DriveToPosition(position, **kwargs):
 
         def start():
             _start()
-            DRIVE.drive_to_position(position)
+            DRIVE.drive_to_position(position, tolerance)
 
     else:
 
         def start():
-            DRIVE.drive_to_position(position)
+            DRIVE.drive_to_position(position, tolerance)
 
     if _is_finished is not None:
         is_finished = lambda: _is_finished() and DRIVE.at_target()
@@ -161,7 +161,7 @@ def DriveToPosition(position, **kwargs):
     return Action(start=start, is_finished=is_finished, **kwargs)
 
 
-def DriveToHeading(heading, **kwargs):
+def DriveToHeading(heading, tolerance=1.0, **kwargs):
     _start = kwargs.pop("start", None)
     _is_finished = kwargs.pop("is_finished", None)
 
@@ -169,12 +169,12 @@ def DriveToHeading(heading, **kwargs):
 
         def start():
             _start()
-            DRIVE.drive_to_heading(heading)
+            DRIVE.drive_to_heading(heading, tolerance)
 
     else:
 
         def start():
-            DRIVE.drive_to_heading(heading)
+            DRIVE.drive_to_heading(heading, tolerance)
 
     if _is_finished is not None:
         is_finished = lambda: _is_finished() and DRIVE.at_target()
@@ -183,17 +183,39 @@ def DriveToHeading(heading, **kwargs):
 
     return Action(start=start, is_finished=is_finished, **kwargs)
 
+def Wait(seconds):
+    s = {}
+    def start():
+        s["start_time"] = time.time()
+    def is_finished():
+        return time.time() - s["start_time"] > seconds
+    return Action(start=start, is_finished=is_finished)
 
-WAYPOINTS = (
-    DriveToPosition([31.25, 19.5]),  # Back out of start
-    DriveToHeading(0.0),  # Turn to face bins
-    DriveToPosition([50.0, 19.5]),  # Drive to first bin
+
+BIN_PICKUP = (
+    DriveToPosition([31.25, 10.0]),  # Back out of start
+    DriveToHeading(180.0),
+    DriveToPosition([46.25, 8.0]),  # Drive to first bin
+    DriveToHeading(180.0),
     ## DO ARM STUFF TO GRAB BIN
     DriveToPosition([22.63, 22.88]),  # Drive to second bin
     DriveToHeading(-90.0),  # Turn to face wall
     DriveTimeout([0.0, 10.0], 2.0, end=lambda: DRIVE.set_current_pose([22.63, 34.375], 90.0)),  # Drive to wall
 )
 
+BEACON = (
+    DriveToPosition([31.25, 20.0], 5.0),  # Back out of start
+    DriveToHeading(180.0, 5.0),
+    DriveToPosition([5.0, 23.5], 0.5),
+    DriveToHeading(180.0, 0.5),
+    DriveTimeout([-30.0, 0.0], 2),
+    Action(start=lambda: BEACON_SERVO.set_position(0.75), is_finished=lambda: True),
+    Wait(1.0),
+    Action(start=lambda: BEACON_SERVO.set_position(0.0), is_finished=lambda: True),
+    Wait(1.0),
+)
+
+AUTO = BEACON
 
 def main():
     PI = pigpio.pi()
@@ -210,14 +232,15 @@ def main():
         if not DRIVE.initialized:
             raise Exception("Drive failed to initialize, exiting...")
 
+        BEACON_SERVO.set_position(0.0)
         if CAMERA.initialized:
             CAMERA.poll_for_light()
         else:
             input("Press Enter to start driving...")
             pass
 
-        current_position = START[:2]
-        current_heading = START[2]
+        current_position = np.array(START[:2])
+        current_heading = np.array([START[2]])
 
         DRIVE.current_position[:] = current_position
         DRIVE.current_heading[:] = current_heading
@@ -235,18 +258,21 @@ def main():
 
             # Update pose
             if IMU.initialized:
-                current_heading = IMU.get_orientation()
+                print(IMU.current_heading)
+                current_heading[:] = IMU.current_heading[:]
             else:
                 # Fallback to odometry
-                current_heading = DRIVE.current_heading
+                current_heading[:] = DRIVE.current_heading[:]
 
-            current_position = DRIVE.current_position
-            DRIVE.current_heading = current_heading
+            current_position[:] = DRIVE.current_position
+            DRIVE.current_heading[:] = current_heading
 
             # Execute action
-            if state < len(WAYPOINTS):
-                if WAYPOINTS[state]():
+            if state < len(AUTO):
+                if AUTO[state]():
+                    DRIVE.stop()
                     print(DRIVE.current_position, DRIVE.current_heading)
+                    # input("Press enter to continue...")
                     # Move to next state
                     state += 1
             else:
@@ -256,11 +282,11 @@ def main():
     except Exception as e:
         pass
     finally:
+        DRIVE.stop()
         for component in ROBOT:
             try:
                 print("Releasing", component)
                 ROBOT[component].release()
             except Exception as e:
                 print("Error releasing", component, e)
-            finally:
-                PI.stop()
+        PI.stop()

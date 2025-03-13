@@ -43,8 +43,8 @@ class Camera(Component):
     def get_frame(self) -> np.ndarray:
         frame = self.picam2.capture_array()
         # if calibration data is available, undistort the frame
-        if self.camera_matrix is not None and self.distortion_coeffs is not None:
-            frame = self.undistort_frame(frame)
+        # if self.camera_matrix is not None and self.distortion_coeffs is not None:
+        #     frame = self.undistort_frame(frame)
         return frame
 
     
@@ -84,18 +84,15 @@ class Camera(Component):
             im = self.get_frame()
             brightness[i] = np.mean(cv2.cvtColor(im, cv2.COLOR_BGR2GRAY))
         
-        print(brightness)
         std = np.std(brightness)
         mean = np.mean(brightness)
-        print(f"Mean: {mean}, Std: {std}")
+        print("Waiting for light...")
         
         try:
             while True:
                 im = self.get_frame()
                 brightness = np.mean(cv2.cvtColor(im, cv2.COLOR_BGR2GRAY))
-                print(f"Brightness: {brightness}")
                 if brightness > mean + 100.0 * std:
-                    print("Light detected.")                
                     break
         except KeyboardInterrupt:
             print("Manual Start.")

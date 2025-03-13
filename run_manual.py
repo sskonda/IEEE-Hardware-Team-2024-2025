@@ -33,6 +33,9 @@ if __name__ == "__main__":
                 case ']':
                     print("Lower Boxes")
                     BIN_LIFT_STEPPER.set_position(0)
+                case 'p':
+                    print("Init Boxes")
+                    BIN_LIFT_STEPPER.set_position(-1000)
                 case 'w':
                     print("Forward")
                     RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)
@@ -60,11 +63,12 @@ if __name__ == "__main__":
                     if BEACON_SERVO.get_desired_position() < 0.75:
                         BEACON_SERVO.set_position(0.75)
                     else:
-                        BEACON_SERVO.set_position(0.25)
+                        BEACON_SERVO.set_position(0.0)
                 case ' ':
                     print("Stop")
-                    for motor in [RIGHT_DRIVE_MOTOR, LEFT_DRIVE_MOTOR, CLAMP_MOTOR, INTAKE_MOTOR]:
-                        motor.stop()
+                    for component in ROBOT.values():
+                        if component.initialized and hasattr(component, "stop"):
+                            component.stop()
     except KeyboardInterrupt as e:
         pass
     finally:

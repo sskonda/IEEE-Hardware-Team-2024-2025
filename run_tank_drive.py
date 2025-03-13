@@ -1,23 +1,26 @@
 import numpy as np
 import pigpio
 from visualizer import draw_indicator, SERVER, OUTPUT
-from robot import DRIVE
+from robot import DRIVE, IMU
 
 PI = pigpio.pi()
 SERVER.start()
 PI.wave_clear()
 
 DRIVE.init(PI)
+IMU.init(PI)
 
 DRIVE.left_motor.stop()
 DRIVE.right_motor.stop()
 
 START = (31.25, 4.625, -90.0)
+# START = (0.0, 0.0, 0.0)
 current_position = START[:2]
 current_heading = START[2]
 
 DRIVE.current_position[:] = current_position
 DRIVE.current_heading[:] = current_heading
+IMU.current_heading[:] = current_heading
 
 try:
     while True:
@@ -29,6 +32,8 @@ try:
         try:
             while True:
                 DRIVE.update()
+                IMU.update()
+                DRIVE.current_heading[:] = IMU.current_heading[:]
 
                 bg = np.zeros((500, 500, 3), np.uint8)
                 robot = draw_indicator(bg, DRIVE.current_position, DRIVE.current_heading, color=(255, 0, 0))

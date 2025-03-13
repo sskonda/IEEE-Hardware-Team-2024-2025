@@ -36,6 +36,7 @@ if __name__ == "__main__":
                 case 'p':
                     print("Init Boxes")
                     BIN_LIFT_STEPPER.set_position(-1000)
+                    BIN_LIFT_STEPPER._desired_position = 0
                 case 'w':
                     print("Forward")
                     RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)

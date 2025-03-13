@@ -1,9 +1,7 @@
-from operator import is_
-import time
-import numpy as np
 import pigpio
-from responses import start
+import numpy as np
 
+from robot.actions import * 
 from .pid import PID
 from .constants import *
 from .components import *
@@ -57,7 +55,7 @@ ROBOT = {
     "CLAMP_MOTOR": CLAMP_MOTOR,
     "CLAMP_ENCODER": CLAMP_ENCODER,
     "BIN_LIFT_STEPPER": BIN_LIFT_STEPPER,
-    "BEACON_SERVO": BEACON_SERVO,
+    # "BEACON_SERVO": BEACON_SERVO,
     # "MISC_SERVO": MISC_SERVO,
     # "PORT_ULTRASONIC": PORT_ULTRASONIC,
     # "STARBOARD_ULTRASONIC": STARBOARD_ULTRASONIC,
@@ -67,155 +65,39 @@ ROBOT = {
     "IMU": IMU,
 }
 
-s = {}
-
-
-class Action:
-    def __init__(self, start=None, is_finished=None, repeated=None, end=None):
-        self.start = start
-        self.end = end
-        self.repeated = repeated
-        self.is_finished = is_finished
-
-        self.done = False
-
-    def __call__(self):
-        if not self.done:
-            if self.start:
-                self.start()
-                self.start = None
-            if self.repeated:
-                self.repeated()
-            if self.is_finished:
-                self.done = self.is_finished()
-            if self.done and self.end:
-                self.end()
-        return self.done
-
-
-START = (31.25, 4.625, -90.0)
-
-
-def DriveTimeout(direction, duration, **kwargs):
-    s = {}
-
-    _start = kwargs.pop("start", None)
-    _is_finished = kwargs.pop("is_finished", None)
-    _repeated = kwargs.pop("repeated", None)
-
-    if _start is not None:
-
-        def start():
-            _start()
-            s["start_time"] = time.time()
-
-    else:
-
-        def start():
-            s["start_time"] = time.time()
-
-    if _repeated is not None:
-
-        def repeated():
-            _repeated()
-            DRIVE.drive_to_position(DRIVE.current_position + direction)
-
-    else:
-
-        def repeated():
-            DRIVE.drive_to_position(DRIVE.current_position + direction)
-
-    if _is_finished is not None:
-
-        def is_finished():
-            return _is_finished() and (time.time() - s["start_time"] > duration)
-
-    else:
-
-        def is_finished():
-            return time.time() - s["start_time"] > duration
-
-    return Action(start=start, is_finished=is_finished, repeated=repeated, **kwargs)
-
-
-def DriveToPosition(position, tolerance=1.0, **kwargs):
-    _start = kwargs.pop("start", None)
-    _is_finished = kwargs.pop("is_finished", None)
-
-    if _start is not None:
-
-        def start():
-            _start()
-            DRIVE.drive_to_position(position, tolerance)
-
-    else:
-
-        def start():
-            DRIVE.drive_to_position(position, tolerance)
-
-    if _is_finished is not None:
-        is_finished = lambda: _is_finished() and DRIVE.at_target()
-    else:
-        is_finished = DRIVE.at_target
-
-    return Action(start=start, is_finished=is_finished, **kwargs)
-
-
-def DriveToHeading(heading, tolerance=1.0, **kwargs):
-    _start = kwargs.pop("start", None)
-    _is_finished = kwargs.pop("is_finished", None)
-
-    if _start is not None:
-
-        def start():
-            _start()
-            DRIVE.drive_to_heading(heading, tolerance)
-
-    else:
-
-        def start():
-            DRIVE.drive_to_heading(heading, tolerance)
-
-    if _is_finished is not None:
-        is_finished = lambda: _is_finished() and DRIVE.at_target()
-    else:
-        is_finished = DRIVE.at_target
-
-    return Action(start=start, is_finished=is_finished, **kwargs)
-
-def Wait(seconds):
-    s = {}
-    def start():
-        s["start_time"] = time.time()
-    def is_finished():
-        return time.time() - s["start_time"] > seconds
-    return Action(start=start, is_finished=is_finished)
-
 
 BIN_PICKUP = (
-    DriveToPosition([31.25, 10.0]),  # Back out of start
-    DriveToHeading(180.0),
-    DriveToPosition([46.25, 8.0]),  # Drive to first bin
-    DriveToHeading(180.0),
+    DriveToPosition(DRIVE, [31.25, 10.0]),  # Back out of start
+    DriveToHeading(DRIVE, 180.0),
+    DriveToPosition(DRIVE, [46.25, 8.0], 0.5),  # Drive to first bin
+    DriveToHeading(DRIVE, 180.0, 0.5),
+    ClampRelease(CLAMP_MOTOR, CLAMP_ENCODER),  # Pin bin to wall
+    ## LOWER ARM TO GRAB BIN
+    ClampTighten(CLAMP_MOTOR, CLAMP_ENCODER),  # Tighten clamp
     ## DO ARM STUFF TO GRAB BIN
-    DriveToPosition([22.63, 22.88]),  # Drive to second bin
-    DriveToHeading(-90.0),  # Turn to face wall
-    DriveTimeout([0.0, 10.0], 2.0, end=lambda: DRIVE.set_current_pose([22.63, 34.375], 90.0)),  # Drive to wall
+    DriveToPosition(DRIVE, [22.63, 22.88]),  # Drive to second bin
+    DriveToHeading(DRIVE, -90.0),  # Turn to face wall
+    DriveTimeout(DRIVE, [0.0, 10.0], 2.0, end=lambda: DRIVE.set_current_pose([22.63, 34.375], 90.0)),  # Drive to wall
 )
 
 BEACON = (
-    DriveToPosition([31.25, 20.0], 5.0),  # Back out of start
-    DriveToHeading(180.0, 5.0),
-    DriveToPosition([5.0, 23.5], 0.5),
-    DriveToHeading(180.0, 0.5),
-    DriveTimeout([-30.0, 0.0], 2),
-    Action(start=lambda: BEACON_SERVO.set_position(0.75), is_finished=lambda: True),
-    Wait(1.0),
-    Action(start=lambda: BEACON_SERVO.set_position(0.0), is_finished=lambda: True),
-    Wait(1.0),
+    DriveToPosition(DRIVE, [31.25, 20.0], 5.0),  # Back out of start
+    DriveToHeading(DRIVE, 180.0, 5.0),
+    DriveToPosition(DRIVE, [5.0, 23.5], 0.5),
+    DriveToHeading(DRIVE, 180.0, 0.5),
+    DriveTimeout(DRIVE, [-30.0, 0.0], 2),
+    WithTimeout(1.0, start=lambda: BEACON_SERVO.set_position(0.75)),
+    WithTimeout(1.0, start=lambda: BEACON_SERVO.set_position(0.0)),
 )
 
-AUTO = BEACON
+CLAMP_TEST = (
+    # WithTimeout(10.0),
+    ClampTighten(CLAMP_MOTOR, CLAMP_ENCODER),
+    # WithTimeout(10.0),
+    # ClampRelease(CLAMP_MOTOR, CLAMP_ENCODER),
+)
+
+AUTO = BIN_PICKUP
 
 def main():
     PI = pigpio.pi()
@@ -232,7 +114,9 @@ def main():
         if not DRIVE.initialized:
             raise Exception("Drive failed to initialize, exiting...")
 
-        BEACON_SERVO.set_position(0.0)
+        if BEACON_SERVO.initialized:
+            BEACON_SERVO.set_position(0.0)
+
         if CAMERA.initialized:
             CAMERA.poll_for_light()
         else:
@@ -258,7 +142,6 @@ def main():
 
             # Update pose
             if IMU.initialized:
-                print(IMU.current_heading)
                 current_heading[:] = IMU.current_heading[:]
             else:
                 # Fallback to odometry

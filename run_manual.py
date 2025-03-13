@@ -56,9 +56,11 @@ if __name__ == "__main__":
                 case 'j':
                     print("Clamp Tighten")
                     CLAMP_MOTOR.set_duty(-1)
+                    print(CLAMP_ENCODER.get_speed())
                 case 'k':
                     print("Clamp Release")
                     CLAMP_MOTOR.set_duty(1)
+                    print(CLAMP_ENCODER.get_speed())
                 case 'b':
                     print("Drop Beacon")
                     if BEACON_SERVO.get_desired_position() < 0.75:

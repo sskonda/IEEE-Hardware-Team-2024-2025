@@ -2,6 +2,9 @@
 from robot.components import Camera
 import numpy as np
 from visualizer import draw_indicator, SERVER, OUTPUT
+from robot import DRIVE, IMU
+import pigpio
+ 
 
 def transform_to_position_heading(matrix):
     """
@@ -33,16 +36,24 @@ def transform_to_position_heading(matrix):
 
 
 def main():
+    PI = pigpio.pi()
+    PI.wave_clear()
     camera = Camera(0)
-    camera.init(None)
+    camera.init(PI)
+    DRIVE.init(PI)
+    IMU.init(PI)
     SERVER.start()
 
     try:
         while True:
+            DRIVE.update()
+            IMU.update()
+            DRIVE.current_heading[:] = IMU.current_heading[:]
+            
             detections= camera.detect_apriltag()
             bg = np.zeros((500, 500, 3), np.uint8)
-            origin = draw_indicator(bg, (0, 0), 0, color=(0, 255, 0))
-
+            origin = draw_indicator(bg, (0, 0), 0, color=(0, 255, 0))# green
+            
             if not detections:
                 OUTPUT.write(origin)
                 continue
@@ -54,24 +65,35 @@ def main():
                 tag_pose_matrix = camera.calculate_pose_matrix()
                 camera_pose = np.linalg.inv(tag_pose_matrix)
 
-                position, heading = camera.get_world_positon(camera_pose, tag_id) or (None, None, None)
+                camera_position, camera_heading = camera.get_world_positon(camera_pose, tag_id) or (None, None, None)
                 #position, heading = transform_to_position_heading(camera_pose)
 
-                if position and heading:
+                if camera_position is not None and camera_heading is not None:
                     print(f"Pose matrix for tag {tag_id}: \n{camera_pose}")
-                    print("Position:", position)
-                    print("Heading (yaw):", heading, "degrees")
+                    print("Position:", camera_position)
+                    print("Heading (yaw):", camera_heading, "degrees")
+                    
+                    motor_position = DRIVE.current_position
+                    motor_heading = DRIVE.current_heading
+                    
+                    position_diff, heading_diff = camera.compare_camera_motor_position(
+                        camera_position, camera_heading, motor_position, motor_heading
+                    )
 
-                    robot = draw_indicator(origin, position, heading, color=(255, 0, 0))
-                    OUTPUT.write(robot)
+                    if position_diff is not None and heading_diff is not None:
+                        print(f"Position Difference: {position_diff} inches")
+                        print(f"Heading Difference: {heading_diff} degrees")
+
+                    robot_drive = draw_indicator(origin, motor_position, motor_heading, color=(255, 0, 0)) # blue 
+                    robot_camera = draw_indicator(origin, camera_position, camera_heading, color=(255, 0, 255))# purple
+                    OUTPUT.write(robot_camera)
 
     except KeyboardInterrupt:
         pass
 
-
-
-
-
+    finally:
+        DRIVE.stop()
+    
 
 if __name__ == "__main__":
     main()

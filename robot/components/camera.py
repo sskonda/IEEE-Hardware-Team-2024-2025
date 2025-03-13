@@ -8,7 +8,7 @@ import numpy as np
 import picamera2
 import sys
 import math
-
+    
 APRILTAG_POSE = { #inches, 0,0 top left corner, 0 degrees is east, world space 
     0: np.array([0.0, 22.5, 0.0]),
     1: np.array([0.0, 22.5, 0.0]),
@@ -131,7 +131,7 @@ class Camera(Component):
             self.pose_matrix[:3, 3] = tvec.flatten()
         return self.pose_matrix
 
-    def rotation_matrix_to_euler(R):
+    def rotation_matrix_to_euler(self, R):
         sy = math.sqrt(R[0, 0] ** 2 + R[1, 0] ** 2)
         singular = sy < 1e-6
 
@@ -161,7 +161,6 @@ class Camera(Component):
     #get rotation 
         rotation_position_vector = pose_matrix[:3, :3]
 
-    # Get AprilTag's real-world position (x, y, z) in the field
         tag_world_position = APRILTAG_POSE[tag_id][:2] # x, y
         tag_world_position = APRILTAG_POSE[tag_id][2] # Extract the angle
 
@@ -178,4 +177,20 @@ class Camera(Component):
         pitch, roll, yaw = self.rotation_matrix_to_euler(rotation_position_vector)
 
         return (camera_global_xy, yaw)
+        
+    def compare_camera_motor_position(self, camera_position, camera_heading, motor_position, motor_heading):
+
+        if camera_position is None or motor_position is None:
+            print("One or both position estimates are missing.")
+            return None
+
+        # Compute Euclidean distance (position difference)
+        position_difference = np.linalg.norm(np.array(camera_position) - np.array(motor_position))
+
+        # Compute heading difference (normalize to range [-180, 180])
+        heading_difference = (camera_heading - motor_heading + 180) % 360 - 180
+
+        return position_difference, heading_difference
+
+
 

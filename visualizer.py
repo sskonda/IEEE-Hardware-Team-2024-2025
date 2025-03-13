@@ -92,9 +92,9 @@ def run_server():
 def draw_indicator(image, position, heading, length=50, color=(0, 0, 255), thickness=2):
     img_height, img_width = image.shape[:2]
     
-    # Normalize position from (-48, -48) to (48, 48) onto image dimensions
-    x = int((position[0] + 48) / 96 * img_width)
-    y = int((48 - position[1]) / 96 * img_height)
+    # Normalize position from (0, 96) to (0, 48) onto image dimensions
+    x = int(position[0] / 96 * img_width)
+    y = int((48 - position[1]) / 48 * img_height)
     
     # Convert heading from degrees to radians
     angle_rad = np.deg2rad(heading)

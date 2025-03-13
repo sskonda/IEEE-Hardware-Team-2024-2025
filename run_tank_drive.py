@@ -35,7 +35,7 @@ try:
                 IMU.update()
                 DRIVE.current_heading[:] = IMU.current_heading[:]
 
-                bg = np.zeros((500, 500, 3), np.uint8)
+                bg = np.zeros((960, 480, 3), np.uint8)
                 robot = draw_indicator(bg, DRIVE.current_position, DRIVE.current_heading, color=(255, 0, 0))
                 target = draw_indicator(
                     robot,

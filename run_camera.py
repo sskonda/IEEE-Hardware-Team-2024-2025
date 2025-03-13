@@ -39,24 +39,38 @@ def main():
 
     try:
         while True:
-            tag_pose_matrix = camera.calculate_pose_matrix()
+            detections= camera.detect_apriltag()
             bg = np.zeros((500, 500, 3), np.uint8)
             origin = draw_indicator(bg, (0, 0), 0, color=(0, 255, 0))
 
-            if tag_pose_matrix is None:
+            if not detections:
                 OUTPUT.write(origin)
                 continue
-            camera_pose = np.linalg.inv(tag_pose_matrix)
-            position, heading = transform_to_position_heading(camera_pose)
 
-            print(f"Pose matrix for tag: \n{camera_pose}") # print to console the pose for each tag
-            print("Position:", position)
-            print("Heading (yaw):", heading, "degrees")
+            for detection in detections:
+                tag_id = detection["id"]  # get ID from detection 
+                print(f"Detected AprilTag ID: {tag_id}")
+            
+                tag_pose_matrix = camera.calculate_pose_matrix()
+                camera_pose = np.linalg.inv(tag_pose_matrix)
 
-            robot = draw_indicator(origin, position, heading, color=(255, 0, 0))
-            OUTPUT.write(robot)
+                position, heading = camera.get_world_positon(camera_pose, tag_id) or (None, None, None)
+                #position, heading = transform_to_position_heading(camera_pose)
+
+                if position and heading:
+                    print(f"Pose matrix for tag {tag_id}: \n{camera_pose}")
+                    print("Position:", position)
+                    print("Heading (yaw):", heading, "degrees")
+
+                    robot = draw_indicator(origin, position, heading, color=(255, 0, 0))
+                    OUTPUT.write(robot)
+
     except KeyboardInterrupt:
         pass
+
+
+
+
 
 
 if __name__ == "__main__":

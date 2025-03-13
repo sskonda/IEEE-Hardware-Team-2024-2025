@@ -7,8 +7,9 @@ import cv2
 import numpy as np
 import picamera2
 import sys
+import math
 
-APRILTAG_POSE = {
+APRILTAG_POSE = { #inches, 0,0 top left corner, 0 degrees is east, world space 
     0: np.array([0.0, 22.5, 0.0]),
     1: np.array([0.0, 22.5, 0.0]),
     2: np.array([0.0, 22.5, 0.0]),
@@ -129,4 +130,52 @@ class Camera(Component):
             self.pose_matrix[:3, :3] = rmat
             self.pose_matrix[:3, 3] = tvec.flatten()
         return self.pose_matrix
+
+    def rotation_matrix_to_euler(R):
+        sy = math.sqrt(R[0, 0] ** 2 + R[1, 0] ** 2)
+        singular = sy < 1e-6
+
+        if not singular:
+            roll = math.atan2(R[2, 1], R[2, 2])
+            pitch = math.atan2(-R[2, 0], sy)
+            yaw = math.atan2(R[1, 0], R[0, 0])
+        else:
+            roll = math.atan2(-R[1, 2], R[1, 1])
+            pitch = math.atan2(-R[2, 0], sy)
+            yaw = 0
+
+        return np.degrees((roll, pitch, yaw))
+
+    def get_world_positon(self, pose_matrix, tag_id):
+
+        if pose_matrix is None: 
+            print("No pose matrix found")
+            return None 
+
+        if tag_id not in APRILTAG_POSE:
+            print(f"Tag ID {tag_id} not found in APRILTAG_POSE dictionary")
+            return None
     
+    # get translation vectior 
+        camera_position_vector = pose_matrix[:3, 3]
+    #get rotation 
+        rotation_position_vector = pose_matrix[:3, :3]
+
+    # Get AprilTag's real-world position (x, y, z) in the field
+        tag_world_position = APRILTAG_POSE[tag_id][:2] # x, y
+        tag_world_position = APRILTAG_POSE[tag_id][2] # Extract the angle
+
+        tag_rotation_degrees= np.degrees(tag_world_position)
+
+        tag_rotation_matrix = np.array([
+            [np.cos(tag_rotation_degrees), -np.sin(tag_rotation_degrees)],
+            [np.sin(tag_rotation_degrees), np.cos(tag_rotation_degrees)]
+        ])
+
+        camera_global_xy = tag_world_position + tag_rotation_matrix@ camera_position_vector[:2]
+
+        # have to convert the rotation to angle eurler, only yaw 
+        pitch, roll, yaw = self.rotation_matrix_to_euler(rotation_position_vector)
+
+        return (camera_global_xy, yaw)
+

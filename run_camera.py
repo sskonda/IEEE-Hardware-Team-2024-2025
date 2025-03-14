@@ -28,6 +28,9 @@ def main():
     DRIVE.init(PI)
     IMU.init(PI)
 
+    DRIVE.target_heading = None
+    DRIVE.target_position = None
+
     SERVER.start()
 
     try:

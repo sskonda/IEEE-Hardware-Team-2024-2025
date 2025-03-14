@@ -155,7 +155,7 @@ class Camera(Component):
                 detection["lb-rb-rt-lt"]
             )
 
-            tag_world_location, tag_world_rotation = APRILTAG_POSE[detection["tag_id"]]
+            tag_world_location, tag_world_rotation = APRILTAG_POSE[detection["id"]]
             tag_world_rotation = np.radians(tag_world_rotation)
             world_points.extend(
                 tag_world_location[None, :] +
@@ -168,20 +168,24 @@ class Camera(Component):
         # Use to solve pnp to get success,rotation, translation,
         image_points = np.array(image_points, dtype=np.float32)
         world_points = np.array(world_points, dtype=np.float32)
-        success, rvec, tvec = cv2.solvePnP(
-            world_points, image_points, self.camera_matrix, self.distortion_coeffs)
-        if success:
-            # Convert rotation vector to rotation matrix
-            rmat, _ = cv2.Rodrigues(rvec)
-            # Construct 4x4 pose matrix
-            # Return a 2-D array with ones on the diagonal and zeros elsewhere.
-            pose_matrix = np.eye(4)
-            pose_matrix[:3, :3] = rmat
-            pose_matrix[:3, 3] = tvec.flatten()
-            self.pose_matrix = np.linalg.inv(pose_matrix)
-        else:
+
+        if len(world_points) == 0 or len(image_points) == 0 or len(world_points) != len(image_points):
             self.pose_matrix = None
-        return self.pose_matrix
+        else:
+            success, rvec, tvec = cv2.solvePnP(
+                world_points, image_points, self.camera_matrix, self.distortion_coeffs)
+            if success:
+                # Convert rotation vector to rotation matrix
+                rmat, _ = cv2.Rodrigues(rvec)
+                # Construct 4x4 pose matrix
+                # Return a 2-D array with ones on the diagonal and zeros elsewhere.
+                pose_matrix = np.eye(4)
+                pose_matrix[:3, :3] = rmat
+                pose_matrix[:3, 3] = tvec.flatten()
+                self.pose_matrix = np.linalg.inv(pose_matrix)
+            else:
+                self.pose_matrix = None
+            return self.pose_matrix
 
     def get_world_positon(self):
 
@@ -201,4 +205,4 @@ class Camera(Component):
         
         heading = np.arctan2(robot_forward_world[1], robot_forward_world[0])
 
-        return robot_world[:3], np.degrees(heading)
+        return robot_world[:2], np.degrees(heading)

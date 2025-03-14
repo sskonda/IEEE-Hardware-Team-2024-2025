@@ -1,5 +1,7 @@
 **/__pycache__/*.*
 *.png
+*.jpg
+
 install/
 build/
 log/

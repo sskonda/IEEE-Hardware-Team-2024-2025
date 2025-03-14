@@ -24,8 +24,6 @@ PAGE = """\
 </html>
 """
 
-
-
 class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
         self.frame = None

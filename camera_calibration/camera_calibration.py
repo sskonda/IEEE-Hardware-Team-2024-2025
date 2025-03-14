@@ -5,8 +5,8 @@ import os
 
 # Chessboard configuration
 chessboard_size = (8, 6)
-square_size_x = 1  # Adjust to real-world size (inches or cm)
-square_size_y = 1
+square_size_m = (6+11/16) / 7 # Adjust to real-world size (inches or cm)
+square_size_y = (4+11/16) / 5
 
 # Prepare real-world object points
 objp = np.zeros((chessboard_size[0] * chessboard_size[1], 3), np.float32)
@@ -22,7 +22,7 @@ if not os.path.exists("output"):
     os.makedirs("output")
 
 # Get all chessboard images (update path if needed)
-images = glob.glob('*.jpg')
+images = glob.glob('input/*.jpg')
 
 if not images:
     print(" No calibration images found! Make sure your images are in the 'images/' folder.")
@@ -38,7 +38,7 @@ for idx, fname in enumerate(images):
         continue
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    ret, corners = cv2.findChessboardCorners(gray, chessboard_size, None)
+    ret, corners = cv2.findChessboardCorners(gray, chessboard_size, flags=cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE )
 
     if ret:
         objpoints.append(objp)
@@ -50,10 +50,10 @@ for idx, fname in enumerate(images):
         cv2.drawChessboardCorners(img, chessboard_size, refined_corners, ret)
 
         # Save the processed image
-        output_filename = f"output/detected_{idx}.jpg"
+        output_filename = fname.replace("input", "output")
         cv2.imwrite(output_filename, img)
         print(f" Chessboard detected! Saved as {output_filename}")
-
+        time.sleep(1.0)
     else:
         print(f"Chessboard not found in {fname}. Skipping...")
 

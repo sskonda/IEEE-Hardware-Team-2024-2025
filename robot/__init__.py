@@ -1,3 +1,4 @@
+from turtle import position
 import pigpio
 import numpy as np
 
@@ -73,7 +74,7 @@ BIN_PICKUP = (
     DriveToHeading(DRIVE, 180.0, 0.5),
     ClampRelease(CLAMP_MOTOR, CLAMP_ENCODER),  # Pin bin to wall
     ## LOWER ARM TO GRAB BIN
-    ClampTighten(CLAMP_MOTOR, CLAMP_ENCODER),  # Tighten clamp
+    # ClampTighten(CLAMP_MOTOR, CLAMP_ENCODER),  # Tighten clamp
     ## DO ARM STUFF TO GRAB BIN
     DriveToPosition(DRIVE, [22.63, 22.88]),  # Drive to second bin
     DriveToHeading(DRIVE, -90.0),  # Turn to face wall
@@ -102,6 +103,10 @@ AUTO = BIN_PICKUP
 def main():
     PI = pigpio.pi()
     PI.wave_clear()
+
+    camera_poses = None
+    drive_poses = None
+    imu_poses = None
 
     try:
         # Wait for start signal
@@ -133,7 +138,25 @@ def main():
 
         state = 0
 
+        if CAMERA.initialized:
+            camera_poses = []
+        if IMU.initialized:
+            imu_poses = []
+        drive_poses = []
+        last_pose_time = time.time()
+
+
         while True:
+            if time.time() - last_pose_time > 0.5:
+                last_pose_time = time.time()
+                if CAMERA.initialized and camera_poses is not None:
+                    position, heading = CAMERA.get_world_positon() or (None, None)
+                    if position is not None and heading is not None:
+                        camera_poses.append({"time": last_pose_time, "position": position, "heading": heading}) 
+                if IMU.initialized and imu_poses is not None:
+                    imu_poses.append({"time": last_pose_time, "position": IMU.current_position, "heading": IMU.current_heading}) 
+                drive_poses.append({"time": last_pose_time, "position": DRIVE.current_position, "heading": DRIVE.current_heading})
+
             # Update loop
             for component in ROBOT:
                 if not ROBOT[component].initialized:
@@ -165,6 +188,14 @@ def main():
     except Exception as e:
         pass
     finally:
+        t = time.asctime()
+        if camera_poses is not None:
+            np.save(f"{t}_camera_poses.npy", camera_poses)
+        if imu_poses is not None:
+            np.save(f"{t}_imu_poses.npy", imu_poses)
+        if drive_poses is not None:
+            np.save(f"{t}_drive_poses.npy", drive_poses)
+
         DRIVE.stop()
         for component in ROBOT:
             try:

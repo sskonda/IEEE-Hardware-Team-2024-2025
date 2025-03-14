@@ -36,6 +36,7 @@ def DriveTimeout(DRIVE: TankDrive, direction, duration, **kwargs):
     _start = kwargs.pop("start", None)
     _is_finished = kwargs.pop("is_finished", None)
     _repeated = kwargs.pop("repeated", None)
+    _end = kwargs.pop("end", None)
 
     if _start is not None:
 
@@ -68,13 +69,25 @@ def DriveTimeout(DRIVE: TankDrive, direction, duration, **kwargs):
 
         def is_finished():
             return time.time() - s["start_time"] > duration
+        
+    if _end is not None:
+        
+        def end():
+            _end()
+            DRIVE.stop()
+    
+    else:
+        
+        def end():
+            DRIVE.stop()
 
-    return Action(start=start, is_finished=is_finished, repeated=repeated, **kwargs)
+    return Action(start=start, is_finished=is_finished, repeated=repeated, end=end, **kwargs)
 
 
 def DriveToPosition(DRIVE: TankDrive, position, tolerance=1.0, **kwargs):
     _start = kwargs.pop("start", None)
     _is_finished = kwargs.pop("is_finished", None)
+    _end = kwargs.pop("end", None)
 
     if _start is not None:
 
@@ -91,13 +104,25 @@ def DriveToPosition(DRIVE: TankDrive, position, tolerance=1.0, **kwargs):
         is_finished = lambda: _is_finished() and DRIVE.at_target()
     else:
         is_finished = DRIVE.at_target
+        
+    if _end is not None:
+        
+        def end():
+            _end()
+            DRIVE.stop()
+        
+    else:
+        
+        def end():
+            DRIVE.stop()
 
-    return Action(start=start, is_finished=is_finished, **kwargs)
+    return Action(start=start, is_finished=is_finished, end=end, **kwargs)
 
 
 def DriveToHeading(DRIVE: TankDrive, heading, tolerance=1.0, **kwargs):
     _start = kwargs.pop("start", None)
     _is_finished = kwargs.pop("is_finished", None)
+    _end = kwargs.pop("end", None)
 
     if _start is not None:
 
@@ -114,8 +139,19 @@ def DriveToHeading(DRIVE: TankDrive, heading, tolerance=1.0, **kwargs):
         is_finished = lambda: _is_finished() and DRIVE.at_target()
     else:
         is_finished = DRIVE.at_target
+    
+    if _end is not None:
+        
+        def end():
+            _end()
+            DRIVE.stop()
+    
+    else:
+        
+        def end():
+            DRIVE.stop()
 
-    return Action(start=start, is_finished=is_finished, **kwargs)
+    return Action(start=start, is_finished=is_finished, end=end, **kwargs)
 
 
 def WithTimeout(seconds, **kwargs):

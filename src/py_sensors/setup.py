@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'sensors_pi'
+package_name = 'py_sensors'
 
 setup(
     name=package_name,
@@ -14,13 +14,13 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='ieee',
-    maintainer_email='ieee@todo.todo',
+    maintainer_email='iyer.nikhil@gmail.com',
     description='TODO: Package description',
-    license='TODO: License declaration',
+    license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'imu.py = sensors_pi.imu.py:main'
+            'mpu6500 = py_sensors.mpu6500:main'
         ],
     },
 )

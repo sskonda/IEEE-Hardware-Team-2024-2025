@@ -1,51 +1,7 @@
-from . import Component
-
 import pigpio
+import numpy as np
 
-
-class Encoder(Component):
-    def _init(self, pi):
-        """Initializes the encoder
-
-        Raises
-        ------
-        NotImplementedError
-            If the method is not implemented
-        """
-        raise NotImplementedError()
-    
-    def get_speed(self) -> float:
-        """Returns the current speed of the encoder in RPM
-
-        Returns
-        -------
-        float
-            The current speed of the encoder in RPM
-
-        Raises
-        ------
-        NotImplementedError
-            If the method is not implemented
-        """
-        raise NotImplementedError()
-
-    def get_angle(self) -> float:
-        """Returns the current angle of the encoder in degrees
-
-        Returns
-        -------
-        float
-            The current angle of the encoder in degrees
-
-        Raises
-        ------
-        NotImplementedError
-            If the method is not implemented
-        """
-        raise NotImplementedError()
-
-
-class HallEncoder(Encoder):
+class HallEncoder():
     def __init__(self, sin_pin, cos_pin, resolution=1):
         super().__init__()
         self.resolution = resolution
@@ -81,7 +37,6 @@ class HallEncoder(Encoder):
         self._cos = (tick, level)
         self._ticks += self.direction
 
-        
     def _sin_cbf(self, _, level, tick):
         if level == 0:
             self._ticks += self.direction
@@ -95,18 +50,19 @@ class HallEncoder(Encoder):
                     self.direction = 1 if self._cos[1] == 1 else -1
             self._high_tick = tick
         elif level == 2: # Watchdog timeout.
-            if self._period is not None:
-                self._period += (self._watchdog * 1000)
+            self._period = None  # Too few ticks per second assume the wheel is not moving
+            # if self._period is not None:
+            #     self._period += (self._watchdog * 1000)
 
     def get_speed(self):
         """
-        Returns the RPM.
+        Returns the current speed of the motor in rad/s.
         """
-        RPM = 0.0
+        speed = 0.0
         if self._period is not None:
-            RPM = 1 / self._period / (self.resolution / 4) * 60 * 1_000_000
+            speed = (2*np.pi * 1_000_000) / (self._period * (self.resolution / 4))
 
-        return self.direction * RPM
+        return self.direction * speed
     
     def get_ticks(self):
         """
@@ -116,9 +72,9 @@ class HallEncoder(Encoder):
     
     def get_angle(self):
         """
-        Returns the angle in degrees.
+        Returns the angle in radians.
         """
-        return self._ticks * 360 / self.resolution
+        return self._ticks * 2 * np.pi / self.resolution
 
     def reset(self):
         self._ticks = 0

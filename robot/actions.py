@@ -1,7 +1,7 @@
 import time
 
-from robot.components.encoder import Encoder
-from robot.components.motor import DutyMotor
+from py_robot.py_robot.encoder import Encoder
+from py_robot.py_robot.motor import DutyMotor
 from robot.components.tank_drive import TankDrive
 
 

@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'py_sensors'
+package_name = 'py_robot'
 
 setup(
     name=package_name,
@@ -13,14 +13,14 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='ieee',
-    maintainer_email='iyer.nikhil@gmail.com',
+    maintainer='kapow',
+    maintainer_email='iyer.h.nikhil@gmail.com',
     description='TODO: Package description',
-    license='Apache-2.0',
+    license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'mpu6500 = py_sensors.mpu6500:main'
+            'differential_drive = py_robot.differential_drive:main'
         ],
     },
 )

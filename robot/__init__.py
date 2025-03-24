@@ -2,7 +2,7 @@ import pigpio
 import numpy as np
 
 from robot.actions import * 
-from .pid import PID
+from ..src.py_robot.py_robot.pid import PID
 from .constants import *
 from .components import *
 

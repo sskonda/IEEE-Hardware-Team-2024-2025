@@ -1,90 +1,21 @@
-from typing import Callable, Optional, Tuple, cast
-
+from typing import cast
+import rclpy
 import numpy as np
-from . import Component
-from ..pid import PID
+import pigpio
+
+from .pid import PID
 from .encoder import Encoder
 
 
-import pigpio
-
-
-class SpeedMotor(Encoder, Component):
-    def __init__(self):
-        super().__init__()
-        self._desired_speed = 0.0
-
-    def set_speed(self, speed: float):
-        """Sets the desired speed of the motor in RPM
-
-        Parameters
-        ----------
-        speed : float
-            The desired speed of the motor in RPM (negative for backwards)
-        """
-        raise NotImplementedError()
-
-    def get_desired_speed(self):
-        self._desired_speed
-
-    def stop(self):
-        self.set_speed(0.0)
-
-
-class DutyMotor(Component):
-    def __init__(self):
-        super().__init__()
-        self._duty = 0.0
-
-    def set_duty(self, duty: float):
-        """Set the duty cycle of the motor (negative for reverse)
-
-        Parameters
-        ----------
-        duty : float
-            The desired duty cycle of the motor
-        """
-        raise NotImplementedError()
-
-    def get_duty(self) -> float:
-        return self._duty
-
-    def stop(self):
-        self.set_duty(0.0)
-
-
-class PositionMotor(Component):
-    def __init__(self):
-        super().__init__()
-
-        self._desired_position = 0.0
-
-    def set_position(self, position: float):
-        """Sets the motor to the given position
-
-        Parameters
-        ----------
-        position : float
-            The desired position (0 being one-side and 1 being the other)
-        """
-        raise NotImplementedError()
-
-    def get_desired_position(self) -> float:
-        return self._desired_position
-
-    def move(self, delta: float):
-        self.set_position(self.get_desired_position() + delta)
-
-
-class BrushedMotor(DutyMotor, Component):
+class BrushedMotor(rclpy.Node):
     def __init__(self, forward_pin: int, reverse_pin: int):
         super().__init__()
 
         self._forward_pin = forward_pin
         self._reverse_pin = reverse_pin
         self.speed = 0
-
-    def _init(self, pi):
+    
+    def _init(self, pi: pigpio.pi):
         self.pi = pi
         self.pi.set_mode(self._forward_pin, pigpio.OUTPUT)
         self.pi.set_mode(self._reverse_pin, pigpio.OUTPUT)
@@ -95,8 +26,6 @@ class BrushedMotor(DutyMotor, Component):
         self.pi.set_PWM_range(self._reverse_pin, 255)
         self.pi.set_PWM_frequency(self._forward_pin, 100)
         self.pi.set_PWM_frequency(self._reverse_pin, 100)
-
-        return True
 
     def set_duty(self, duty: float):
         self._duty = int(255 * duty)
@@ -115,7 +44,7 @@ class BrushedMotor(DutyMotor, Component):
         self.pi.set_mode(self._reverse_pin, pigpio.INPUT)
 
 
-class ServoMotor(PositionMotor, Component):
+class ServoMotor():
     def __init__(self, pin: int, period=20.0, min_pulse=0.8, max_pulse=2.2):
         super().__init__()
 
@@ -152,7 +81,7 @@ class ServoMotor(PositionMotor, Component):
         self.pi.set_mode(self.pin, pigpio.INPUT)
 
 
-class StepperMotor(PositionMotor, Component):
+class StepperMotor():
     def __init__(self, step_pin, direction_pin):
         super().__init__()
 
@@ -222,14 +151,13 @@ class StepperMotor(PositionMotor, Component):
         self.pi.wave_delete(self._backward_wave)
 
 
-class PIDMotor(PositionMotor, SpeedMotor, Component):
+class PIDMotor():
     def __init__(
         self,
-        duty_motor: DutyMotor,
+        duty_motor: BrushedMotor,
         encoder: Encoder,
-        position_pid: Optional[PID] = None,
-        velocity_pid: Optional[PID] = None,
-        smoothing=0.0,
+        position_pid: PID | None = None,
+        velocity_pid: PID | None = None,
         max_duty=1.0,
     ):
         super().__init__()
@@ -239,7 +167,6 @@ class PIDMotor(PositionMotor, SpeedMotor, Component):
         self.position_pid = position_pid
         self.velocity_pid = velocity_pid
 
-        self.smoothing = smoothing
         self.last_control = 0.0
         self.max_duty = max_duty
 

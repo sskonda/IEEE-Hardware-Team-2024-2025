@@ -3,9 +3,9 @@ import numpy as np
 
 from robot.components import Component
 
-from ..pid import PID
+from ...src.py_robot.py_robot.pid import PID
 from ..constants import DRIVE_WHEEL_DIAMETER, DRIVE_WHEEL_OFFTANGENT, DRIVE_WHEEL_SPACING
-from .motor import PIDMotor
+from ...src.py_robot.py_robot.motor import PIDMotor
 
 def pos_neg(angle) -> float:
     return (angle + 180.0) % 360.0 - 180.0

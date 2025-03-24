@@ -57,8 +57,8 @@ class MPU6500(rclpy.Node):
         if whoami != self.WHO_AM_I:
             raise Exception(f"Failed to validate WHO_AM_I register. (Read {whoami} Expected {self.WHO_AM_I})")
         
-        self.publisher = self.create_publisher(Imu, '/sensors/mpu6500', qos_profile=qos_profile_sensor_data)
-        self.timer = self.create_timer(self.timer_period, self._timer_callback)
+        self.publisher = self.create_publisher(Imu, '/sensors/imu', qos_profile=qos_profile_sensor_data)
+        self.timer = self.create_timer(self.timer_period, self._periodic)
     
     def __read_device(self):
         (s, b) = self.pi.i2c_read_i2c_block_data(self.handle, self.DATA_ADDRESS, 6 + 2 + 6)
@@ -70,7 +70,7 @@ class MPU6500(rclpy.Node):
             return linear_acceleration, angular_velocity
         return None 
 
-    def _timer_callback(self):
+    def _periodic(self):
         data = self.__read_device()       
         if data is not None:
             linear_acceleration, angular_velocity = data

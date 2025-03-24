@@ -4,10 +4,10 @@ import numpy as np
 import pigpio
 
 from .pid import PID
-from .encoder import Encoder
+from .encoder import HallEncoder
 
 
-class BrushedMotor(rclpy.Node):
+class BrushedMotor():
     def __init__(self, forward_pin: int, reverse_pin: int):
         super().__init__()
 
@@ -15,7 +15,7 @@ class BrushedMotor(rclpy.Node):
         self._reverse_pin = reverse_pin
         self.speed = 0
     
-    def _init(self, pi: pigpio.pi):
+    def init(self, pi: pigpio.pi):
         self.pi = pi
         self.pi.set_mode(self._forward_pin, pigpio.OUTPUT)
         self.pi.set_mode(self._reverse_pin, pigpio.OUTPUT)
@@ -38,7 +38,7 @@ class BrushedMotor(rclpy.Node):
         self.pi.write(self._forward_pin, 0)
         self.pi.write(self._reverse_pin, 0)
 
-    def _release(self):
+    def release(self):
         self.stop()
         self.pi.set_mode(self._forward_pin, pigpio.INPUT)
         self.pi.set_mode(self._reverse_pin, pigpio.INPUT)
@@ -54,14 +54,13 @@ class ServoMotor():
         self.min_pulse = min_pulse
         self.max_pulse = max_pulse
 
-    def _init(self, pi):
+    def init(self, pi):
         self.pi = pi
         self.pi.set_mode(self.pin, pigpio.OUTPUT)
 
         self.pi.set_PWM_dutycycle(self.pin, 0)
         self.pi.set_PWM_range(self.pin, int(self.resolution * self.period))
         self.pi.set_PWM_frequency(self.pin, int(1000 / self.period))
-        return True
 
     def set_position(self, position):
         """Moves to the desired position 0 being one side 1 being the other
@@ -75,7 +74,7 @@ class ServoMotor():
         duty = (self.max_pulse - self.min_pulse) * position + self.min_pulse
         self.pi.set_PWM_dutycycle(self.pin, int(self.resolution * duty + 0.5))
 
-    def _release(self):
+    def release(self):
         self.pi.set_PWM_dutycycle(self.pin, 0)
         self.pi.write(self.pin, 0)
         self.pi.set_mode(self.pin, pigpio.INPUT)
@@ -91,7 +90,7 @@ class StepperMotor():
         self._forward_wave = None
         self._backward_wave = None
 
-    def _init(self, pi):
+    def init(self, pi):
         self.pi = pi
         self.pi.set_mode(self._step_pin, pigpio.OUTPUT)
         self.pi.set_mode(self._direction_pin, pigpio.OUTPUT)
@@ -114,7 +113,6 @@ class StepperMotor():
 
         self.pi.wave_add_generic(backward_pulse)
         self._backward_wave = self.pi.wave_create()
-        return True
 
     def set_position(self, position: float):
         delta = int(int(position) - self._desired_position)
@@ -141,7 +139,7 @@ class StepperMotor():
             )
             remaining_steps -= steps
 
-    def _release(self):
+    def release(self):
         self.pi.wave_tx_stop()
         self.pi.write(self._step_pin, 0)
         self.pi.write(self._direction_pin, 0)
@@ -155,7 +153,7 @@ class PIDMotor():
     def __init__(
         self,
         duty_motor: BrushedMotor,
-        encoder: Encoder,
+        encoder: HallEncoder,
         position_pid: PID | None = None,
         velocity_pid: PID | None = None,
         max_duty=1.0,
@@ -177,8 +175,9 @@ class PIDMotor():
         else:
             raise ValueError("Either position or velocity PID must be set")
 
-    def _init(self, pi):
-        return self.duty_motor.init(pi) and self.encoder.init(pi)
+    def init(self, pi):
+        self.duty_motor.init(pi)
+        self.encoder.init(pi)
 
     def set_position(self, position: float):
         if self.position_pid is None:
@@ -195,21 +194,22 @@ class PIDMotor():
             self._desired_speed = speed
             self.velocity_pid.setpoint = np.array([speed])
             self.active_mode = (self.velocity_pid, self.encoder.get_speed)
+    
+    def get_position(self):
+        return self.encoder.get_angle()
+
+    def get_speed(self):
+        return self.encoder.get_speed()
 
     def pid(self):
-        return self.active_mode[0]
+        self.active_mode[0]
 
     def update(self):
         pid, get_value = self.active_mode
         control = pid.update(np.array([get_value()])).item()
-        control = self.last_control * self.smoothing + control * (1 - self.smoothing)
-        self.last_control = control
         self.duty_motor.set_duty(max(-self.max_duty, min(self.max_duty, control)))
 
-        self.duty_motor.update()
-        self.encoder.update()
-
-    def _release(self):
+    def release(self):
         self.duty_motor.release()
         self.encoder.release()
 

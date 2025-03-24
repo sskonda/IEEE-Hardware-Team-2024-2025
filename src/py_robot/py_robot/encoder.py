@@ -20,7 +20,7 @@ class HallEncoder():
 
         self._ticks = 0
     
-    def _init(self, pi: pigpio.pi) -> bool:
+    def init(self, pi: pigpio.pi):
         self.pi = pi
         self.pi.set_mode(self._sin_pin, pigpio.INPUT)
         self.pi.set_mode(self._cos_pin, pigpio.INPUT)
@@ -30,8 +30,6 @@ class HallEncoder():
         self.pi.set_watchdog(self._sin_pin, self._watchdog)
 
         self._ticks = 0
-        return True
-        
         
     def _cos_cbf(self, _, level, tick):
         self._cos = (tick, level)
@@ -80,7 +78,7 @@ class HallEncoder():
         self._ticks = 0
         pass
 
-    def _release(self):
+    def release(self):
         """
         Cancels the reader and releases resources.
         """

@@ -1,3 +1,4 @@
+from py_robot.py_robot.mpu6500 import MPU6500
 import rclpy
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Duration
@@ -57,7 +58,7 @@ class DifferentialDrive(rclpy.Node):
         self.timer_period = self.declare_parameter('timer_period', 0.01).get_parameter_value().double_value
 
         timeout = self.declare_parameter('cmd_vel_lifetime', 0.1).get_parameter_value().double_value
-        self.cmd_vel_lifetime = Duration(sec=timeout)
+        self.cmd_vel_lifetime = Duration(seconds=timeout)
 
         self.pi = pigpio.pi()
 
@@ -80,11 +81,11 @@ class DifferentialDrive(rclpy.Node):
         self.odometry_publisher = self.create_publisher(Odometry, '/drive/odometry', qos_profile=qos_profile_sensor_data)
         self.timer = self.create_timer(self.timer_period, self._periodic)
         
-    def _cmd_vel_received(self, msg):
+    def _cmd_vel_received(self, msg: Twist):
         print(type(msg))
-        print(msg.data)
+        print(msg)
         self._cmd_vel_stamp = self.get_clock().now()
-        self._cmd_vel = msg.data
+        self._cmd_vel = msg
 
     def _periodic(self):
         # Do kinematics
@@ -167,8 +168,12 @@ class DifferentialDrive(rclpy.Node):
         self.pi.stop()
 
 
-def main():
-    print('Hi from py_robot.')
+def main(args=None):
+    rclpy.init(args=args)
+    drive = DifferentialDrive()
+    rclpy.spin(drive)
+    drive.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == '__main__':

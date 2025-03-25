@@ -79,7 +79,7 @@ class MPU6500(rclpy.Node):
             msg.header.frame_id = self.frame_id
             # msg.orientation = 
             # msg.orientation_covariance = 
-            msg.orientation_covariance = [-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            msg.orientation_covariance = [-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # Orientation is not provided
             msg.angular_velocity = Vector3(x=angular_velocity[0], y=angular_velocity[1], z=angular_velocity[2])
             msg.angular_velocity_covariance = self.angular_covariance
             msg.linear_acceleration = Vector3(x=linear_acceleration[0], y=linear_acceleration[1], z=linear_acceleration[2])

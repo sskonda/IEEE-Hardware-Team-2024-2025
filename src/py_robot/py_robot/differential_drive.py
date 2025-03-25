@@ -57,7 +57,7 @@ class DifferentialDrive(Node):
         
         self.timer_period = self.declare_parameter('timer_period', 0.01).get_parameter_value().double_value
 
-        timeout = self.declare_parameter('cmd_vel_lifetime', 0.1).get_parameter_value().double_value
+        timeout = self.declare_parameter('cmd_vel_lifetime', 0.5).get_parameter_value().double_value
         self.cmd_vel_lifetime = Duration(seconds=timeout)
 
         self.pi = pigpio.pi()
@@ -78,13 +78,11 @@ class DifferentialDrive(Node):
         
         self._cmd_vel = Twist()
         self._cmd_vel_stamp = None
-        self.cmd_vel_subscription = self.create_subscription(Twist, "/drive/cmd_vel", self._cmd_vel_received, qos_profile=1)
+        self.cmd_vel_subscription = self.create_subscription(Twist, "/cmd_vel", self._cmd_vel_received, qos_profile=qos_profile_sensor_data)
         self.odometry_publisher = self.create_publisher(Odometry, '/drive/odometry', qos_profile=qos_profile_sensor_data)
         self.timer = self.create_timer(self.timer_period, self._periodic)
         
     def _cmd_vel_received(self, msg: Twist):
-        print(type(msg))
-        print(msg)
         self._cmd_vel_stamp = self.get_clock().now()
         self._cmd_vel = msg
 
@@ -147,6 +145,7 @@ class DifferentialDrive(Node):
         )
 
         # Do inverse kinematics
+
         if self._cmd_vel_stamp is None or (self.get_clock().now() - self._cmd_vel_stamp) > self.cmd_vel_lifetime:
             self._cmd_vel = Twist()
         V = self._cmd_vel.linear.x
@@ -154,6 +153,8 @@ class DifferentialDrive(Node):
         v_R = (V + w * DRIVE_EFFECTIVE_SPACING)
         v_L = (V - w * DRIVE_EFFECTIVE_SPACING)
 
+        print(self._cmd_vel)
+        print(v_L, v_R)
         self.right_motor.set_speed(v_R)
         self.left_motor.set_speed(v_L)
 
@@ -172,9 +173,16 @@ class DifferentialDrive(Node):
 def main(args=None):
     rclpy.init(args=args)
     drive = DifferentialDrive()
-    rclpy.spin(drive)
-    drive.destroy_node()
+    
+    try:
+        rclpy.spin(drive)
+    finally:
+        drive.release()
+        drive.destroy_node()
+
     rclpy.shutdown()
+
+    
 
 
 if __name__ == '__main__':

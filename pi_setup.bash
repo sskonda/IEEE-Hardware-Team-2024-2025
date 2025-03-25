@@ -40,7 +40,7 @@ sudo systemctl start pigpiod.service
 sudo apt install git-lfs -y
 
 # Install required ROS packages
-sudo apt install ros-jazzy-camera-ros ros-jazzy-apriltag-ros
+sudo apt install ros-jazzy-camera-ros ros-jazzy-apriltag-ros ros-jazzy-xacro
 
 
 # Clone git repo

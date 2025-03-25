@@ -62,7 +62,7 @@ class MPU6500(Node):
         self.timer = self.create_timer(self.timer_period, self._periodic)
     
     def __read_device(self):
-        (s, b) = self.pi.i2c_read_i2c_block_data(self.handle, self.DATA_ADDRESS, 6 + 2 + 6)
+        (s, b) = self.pi.i2c_read_i2c_block_data(self.i2c_handle, self.DATA_ADDRESS, 6 + 2 + 6)
 
         if s >= 0:
             data = np.array([val for val in struct.unpack('>3hxx3h', b)])
@@ -75,16 +75,20 @@ class MPU6500(Node):
         data = self.__read_device()       
         if data is not None:
             linear_acceleration, angular_velocity = data
-            msg = Imu()
-            msg.header.stamp = self.get_clock().now()
-            msg.header.frame_id = self.frame_id
-            # msg.orientation = 
-            # msg.orientation_covariance = 
-            msg.orientation_covariance = [-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # Orientation is not provided
-            msg.angular_velocity = Vector3(x=angular_velocity[0], y=angular_velocity[1], z=angular_velocity[2])
-            msg.angular_velocity_covariance = self.angular_covariance
-            msg.linear_acceleration = Vector3(x=linear_acceleration[0], y=linear_acceleration[1], z=linear_acceleration[2])
-            msg.linear_acceleration_covariance = self.linear_covariance
+            msg = Imu(
+                header=Header(
+                    stamp=self.get_clock().now().to_msg(),
+                    frame_id=self.frame_id
+                ),
+                # orientation=,
+                orientation_covariance=[-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # Orientation is not provided
+                angular_velocity = Vector3(x=angular_velocity[0], y=angular_velocity[1], z=angular_velocity[2]),
+                angular_velocity_covariance = self.angular_covariance,
+                linear_acceleration = Vector3(x=linear_acceleration[0], y=linear_acceleration[1], z=linear_acceleration[2]),
+                linear_acceleration_covariance = self.linear_covariance,
+            )
+            print(msg)
+            self.publisher.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)

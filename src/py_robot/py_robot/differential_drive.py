@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.qos import qos_profile_sensor_data
+from rclpy.time import Duration
 import numpy as np 
 import pigpio
 
@@ -55,6 +56,9 @@ class DifferentialDrive(rclpy.Node):
         
         self.timer_period = self.declare_parameter('timer_period', 0.01).get_parameter_value().double_value
 
+        timeout = self.declare_parameter('cmd_vel_lifetime', 0.1).get_parameter_value().double_value
+        self.cmd_vel_lifetime = Duration(sec=timeout)
+
         self.pi = pigpio.pi()
 
         self.left_motor = LEFT_PID_MOTOR
@@ -79,6 +83,7 @@ class DifferentialDrive(rclpy.Node):
     def _cmd_vel_received(self, msg):
         print(type(msg))
         print(msg.data)
+        self._cmd_vel_stamp = self.get_clock().now()
         self._cmd_vel = msg.data
 
     def _periodic(self):
@@ -126,13 +131,22 @@ class DifferentialDrive(rclpy.Node):
             twist=TwistWithCovariance(
                 twist=Twist(
                     linear=Vector3(
-                        
+                        x=local_twist[0],
+                        y=local_twist[1],
+                        z=0.0
+                    ),
+                    angular=Vector3(
+                        x=0.0,
+                        y=0.0,
+                        z=local_twist[2]
                     )
                 )
             )
         )
 
         # Do inverse kinematics
+        if (self.get_clock().now() - self._cmd_vel_stamp) > self.cmd_vel_lifetime:
+            self._cmd_vel = Twist()
         V = self._cmd_vel.linear.x
         w = self._cmd_vel.angular.z
         v_R = (V + w * DRIVE_EFFECTIVE_SPACING)

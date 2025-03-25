@@ -28,13 +28,13 @@
   <joint name="base_imu" type="fixed">
     <parent link="base_link"/>
     <child link="imu_link"/>
-    <origin xyz="-0.0582085 -0.079396 0.228256" rpy="${pi/2} ${pi/2} 0.0"/>
+    <origin xyz="-0.04281711 -0.12469021 0.21492789" rpy="${pi/2} ${-pi/2} 0.0"/>
   </joint>
 
   <joint name="base_camera" type="fixed">
     <parent link="base_link"/>
     <child link="camera_link"/>
-    <origin xyz="0.117094 0.0 0.087219"/>
+    <origin xyz="0.11784511 0.0 0.09754467"/>
   </joint>
 
   <joint name="camera_optical_joint" type="fixed">

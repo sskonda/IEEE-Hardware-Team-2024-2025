@@ -1,6 +1,7 @@
 **/__pycache__/*.*
 *.png
 *.jpg
+*.tar.gz
 
 install/
 build/

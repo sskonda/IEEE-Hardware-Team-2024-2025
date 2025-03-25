@@ -1,5 +1,5 @@
-from py_robot.py_robot.mpu6500 import MPU6500
 import rclpy
+from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Duration
 import numpy as np 
@@ -44,7 +44,7 @@ KINEMATIC = (DRIVE_WHEEL_DIAMETER / 2.0) * np.array([
             [1.0 / DRIVE_EFFECTIVE_SPACING, -1.0 / DRIVE_EFFECTIVE_SPACING]
 ])
 
-class DifferentialDrive(rclpy.Node):
+class DifferentialDrive(Node):
     """
     Controls the robot with tank drive movement the two brushed motors.
     """
@@ -77,6 +77,7 @@ class DifferentialDrive(rclpy.Node):
         ])
         
         self._cmd_vel = Twist()
+        self._cmd_vel_stamp = None
         self.cmd_vel_subscription = self.create_subscription(Twist, "/drive/cmd_vel", self._cmd_vel_received, qos_profile=1)
         self.odometry_publisher = self.create_publisher(Odometry, '/drive/odometry', qos_profile=qos_profile_sensor_data)
         self.timer = self.create_timer(self.timer_period, self._periodic)
@@ -97,16 +98,16 @@ class DifferentialDrive(rclpy.Node):
         self.__last_wheel_angles = wheel_states[:, 0]
         
         
-        local_twist = KINEMATIC @ wheel_states
-        global_twist = np.array([
-            [ np.cos(self.current_heading), np.cos(self.current_heading), 0.0],
-            [ np.sin(self.current_heading), np.sin(self.current_heading), 0.0],
+        local_twist = (KINEMATIC @ wheel_states).T
+        global_twist = (np.array([
+            [ np.cos(self.current_heading.item()), np.cos(self.current_heading.item()), 0.0],
+            [ np.sin(self.current_heading.item()), np.sin(self.current_heading.item()), 0.0],
             [                          0.0,                          0.0, 1.0],
-        ]) @ local_twist
+        ]) @ local_twist.T).T
 
         # TODO: Implement arc-based position update
-        self.current_position += global_twist[:, [0, 1]]
-        self.current_heading += global_twist[:, [2]]
+        self.current_position += global_twist[0, [0, 1]]
+        self.current_heading += global_twist[0, [2]]
 
         odom = Odometry(
             header=Header(
@@ -132,21 +133,21 @@ class DifferentialDrive(rclpy.Node):
             twist=TwistWithCovariance(
                 twist=Twist(
                     linear=Vector3(
-                        x=local_twist[0],
-                        y=local_twist[1],
+                        x=local_twist[1, 0],
+                        y=local_twist[1, 1],
                         z=0.0
                     ),
                     angular=Vector3(
                         x=0.0,
                         y=0.0,
-                        z=local_twist[2]
+                        z=local_twist[1, 2]
                     )
                 )
             )
         )
 
         # Do inverse kinematics
-        if (self.get_clock().now() - self._cmd_vel_stamp) > self.cmd_vel_lifetime:
+        if self._cmd_vel_stamp is None or (self.get_clock().now() - self._cmd_vel_stamp) > self.cmd_vel_lifetime:
             self._cmd_vel = Twist()
         V = self._cmd_vel.linear.x
         w = self._cmd_vel.angular.z

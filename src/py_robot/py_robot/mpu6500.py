@@ -2,13 +2,14 @@ import struct
 import rclpy
 import pathlib
 import pigpio
+from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 import numpy as np
 from std_msgs.msg import Header
 from geometry_msgs.msg import Quaternion, Vector3
 from sensor_msgs.msg import Imu
 
-class MPU6500(rclpy.Node):
+class MPU6500(Node):
     DATA_ADDRESS = 0x3B
     WHO_AM_I_ADDRESS = 0x75
     WHO_AM_I = 0x70
@@ -17,7 +18,7 @@ class MPU6500(rclpy.Node):
         super().__init__('mpu6500')
 
         self.device_address = self.declare_parameter('device_address', 0x68).get_parameter_value().integer_value
-        self.i2c_bus_id = self.declare_parameter('i2c_bus_id', 1).get_parameter_value().integer_array_value
+        self.i2c_bus_id = self.declare_parameter('i2c_bus_id', 1).get_parameter_value().integer_value
         self.timer_period = self.declare_parameter('timer_period', 0.01).get_parameter_value().double_value
         self.frame_id = self.declare_parameter('frame_id', '/imu').get_parameter_value().string_value
         axis_order = self.declare_parameter('axis_order', 'xyz').get_parameter_value().string_value

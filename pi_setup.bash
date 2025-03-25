@@ -42,8 +42,9 @@ sudo apt install git-lfs -y
 # Install required ROS packages
 sudo apt install ros-jazzy-camera-ros ros-jazzy-apriltag-ros
 
-git con
 
 # Clone git repo
 cd ~
+git config user.email "iyer.nikhil@ufl.edu"
+git config user.name "Nikhil Iyer"
 git clone https://github.com/sskonda/IEEE-Hardware-Team-2024-2025.git

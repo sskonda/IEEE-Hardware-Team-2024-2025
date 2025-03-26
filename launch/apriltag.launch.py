@@ -2,11 +2,31 @@ from launch import LaunchDescription
 from launch_ros.actions import Node, ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 
-camera_parameters = {'camera': 0, 'width': 1640, 'height': 1232, 'sensor_mode': '1640:1232', 'format': 'YUYV'}
-apriltag_config = {'params-file': 'apriltag_config.yaml'}
+camera_parameters = {
+    'camera': 0,
+    'width': 1640,
+    'height': 1232,
+    'sensor_mode': '1640:1232',
+    'format': 'YUYV'
+}
+
+apriltag_config = {
+    'image_transport': 'raw',
+    'family': '36h11',
+    'size': 0.080,
+    'max_hamming': 0,
+    'detector': {
+        'threads': 2,
+        'decimate': 2.0,
+        'blur': 0.0,
+        'refine': True,
+        'sharpening': 0.25,
+        'debug': True
+    }
+}
 
 def generate_launch_description():
-    container = ComposableNodeContainer(
+    apriltag_container = ComposableNodeContainer(
         name='apriltag_container',
         namespace='',
         package='rclcpp_components',
@@ -47,7 +67,7 @@ def generate_launch_description():
     )
     
     return LaunchDescription([
-        container,
+        apriltag_container,
         Node(
             package='web_video_server',
             executable='web_video_server',

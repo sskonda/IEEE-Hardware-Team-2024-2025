@@ -1,7 +1,7 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
-from parameters import camera_parameters
+camera_parameters = {'camera': 0, 'width': 1640, 'height': 1232, 'sensor_mode': '1640:1232', 'format': 'YUYV'}
 
 def generate_launch_description():
     return LaunchDescription([

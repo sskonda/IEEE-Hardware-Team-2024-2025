@@ -6,7 +6,8 @@ camera_parameters = {'camera': 0, 'width': 1640, 'height': 1232, 'sensor_mode': 
 apriltag_config = {'params-file': 'apriltag_config.yaml'}
 
 def generate_launch_description():
-    container = ComposableNodeContainer(
+    
+    apriltag_container = ComposableNodeContainer(
         name='apriltag_container',
         namespace='',
         package='rclcpp_components',
@@ -45,9 +46,17 @@ def generate_launch_description():
             )
         ]
     )
+
+    
     
     return LaunchDescription([
-        container,
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state',
+            parameters=[{'robot_description': 'robot.xml'}]
+        ),
+        apriltag_container,
         Node(
             package='web_video_server',
             executable='web_video_server',

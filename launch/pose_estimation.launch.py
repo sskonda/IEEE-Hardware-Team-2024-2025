@@ -2,6 +2,8 @@ from launch import LaunchDescription
 from launch_ros.actions import Node, ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 
+import xacro
+
 camera_parameters = {'camera': 0, 'width': 1640, 'height': 1232, 'sensor_mode': '1640:1232', 'format': 'YUYV'}
 apriltag_config = {'params-file': 'apriltag_config.yaml'}
 
@@ -47,14 +49,14 @@ def generate_launch_description():
         ]
     )
 
-    
+    robot_description = xacro.process_file('robot.xacro').toprettyxml(indent='  ') # type: ignore
     
     return LaunchDescription([
         Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
             name='robot_state',
-            parameters=[{'robot_description': 'robot.xml'}]
+            parameters=[{'robot_description': robot_description}]
         ),
         apriltag_container,
         Node(

@@ -34,7 +34,7 @@
   <joint name="base_camera" type="fixed">
     <parent link="base_link"/>
     <child link="camera_link"/>
-    <origin xyz="0.11784511 0.0 0.09754467"/>
+    <origin xyz="0.11784511 0.0 0.09754467" rpy="${pi} 0 0"/>
   </joint>
 
   <joint name="camera_optical_joint" type="fixed">

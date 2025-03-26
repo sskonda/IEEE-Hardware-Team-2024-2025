@@ -25,6 +25,10 @@ apriltag_parameters = {
         'refine': True,
         'sharpening': 0.25,
         'debug': False
+    },
+    'tag': {
+        'ids': list(range(8)),
+        'frames': [f'detected_tag:{n}' for n in range(8)]
     }
 }
 
@@ -200,6 +204,11 @@ def generate_launch_description():
             package='py_robot',
             executable='mpu6500',
             name='imu',
+        ),
+        Node(
+            package='py_robot',
+            executable='tag_pose_publisher',
+            name='tag_pose_publisher'
         ),
         Node(
             package='py_robot',

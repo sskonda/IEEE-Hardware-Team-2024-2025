@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': [
             'differential_drive = py_robot.differential_drive:main',
-            'mpu6500 = py_robot.mpu6500:main'
+            'mpu6500 = py_robot.mpu6500:main',
+            'tag_pose_publisher = py_robot.tag_pose_publisher:main',
         ],
     },
 )

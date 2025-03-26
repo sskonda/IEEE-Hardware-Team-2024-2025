@@ -14,7 +14,7 @@
     <visual>
       <origin rpy="0 0 -1.5707963267948966" xyz="0.10221778 0.08108958999999999 0.0"/>
       <geometry>
-        <mesh filename="file://ROOT.stl"/>
+        <mesh filename="ROOT.stl"/>
         <box size="0.23495 0.269875 0.293653"/>
       </geometry>
       <material name="blue"/>
@@ -22,7 +22,7 @@
   </link>
   <link name="imu_link"/>
   <link name="camera_link"/>
-  <link name="camera_link_optical"/>
+  <link name="camera"/>
   <joint name="base_imu" type="fixed">
     <parent link="base_link"/>
     <child link="imu_link"/>
@@ -35,7 +35,7 @@
   </joint>
   <joint name="camera_optical_joint" type="fixed">
     <parent link="camera_link"/>
-    <child link="camera_link_optical"/>
+    <child link="camera"/>
     <origin rpy="-1.5707963267948966 0 -1.5707963267948966" xyz="0 0 0"/>
   </joint>
 </robot>

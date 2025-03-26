@@ -14,7 +14,7 @@
     <visual>
       <origin xyz="${length/2 -0.01525722} ${width/2 -0.05384791} 0.0" rpy="0 0 ${-pi/2}" />
       <geometry>
-        <mesh filename="file://ROOT.stl"/>
+        <mesh filename="ROOT.stl"/>
         <box size="0.23495 0.269875 0.293653"/>
       </geometry>
       <material name="blue"/>

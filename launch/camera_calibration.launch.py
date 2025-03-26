@@ -1,14 +1,16 @@
-import launch
-import launch_ros.actions
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+from parameters import camera_parameters
 
 def generate_launch_description():
-    return launch.LaunchDescription([
+    return LaunchDescription([
         # Camera Node
-        launch_ros.actions.Node(
+        Node(
             package="camera_ros",
             executable="camera_node",
             name="camera",
-            parameters=[{'camera': 0, 'width': 1640, 'height': 1232, 'sensor_mode': '1640:1232', 'format': 'YUYV'}],
+            parameters=[camera_parameters],
             remappings=[
                 ('/camera/image_raw', '/camera/image_raw_fast'),
                 ('/camera/image_raw/compressed', '/camera/image_raw_fast/compressed'),
@@ -16,7 +18,7 @@ def generate_launch_description():
         ),
 
         # Throttle Node (Topic Tools)
-        launch_ros.actions.Node(
+        Node(
             package="topic_tools",
             executable="throttle",
             name="throttle",
@@ -24,7 +26,7 @@ def generate_launch_description():
         ),
 
         # Throttle Node (Topic Tools)
-        launch_ros.actions.Node(
+        Node(
             package="topic_tools",
             executable="throttle",
             name="throttle",

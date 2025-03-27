@@ -12,15 +12,16 @@ from  py_robot.pid import PID
 # I have to check if its at the position it needs to be, node tbat takes position to drive to and publishes command vel
 #PARAMETERS 
 
-class drive_to_pose(Node):
+class DriveToPose(Node):
     def __init__(self):
-        super().__init__('drive_to_pose')
+        super().__init__('DriveToPose')
 
         #PARAMETERS 
         self.declare_parameter("position_tolerance", 0.05)
         self.declare_parameter("angle_tolerance", 0.01)
         self.position_tolerance = self.get_parameter("position_tolerance").value
         self.angle_tolerance = self.get_parameter("angle_tolerance").value
+
 
         #self.tf_buffer = Buffer()
         #self.tf_listener = TransformListener(self.tf_buffer)
@@ -112,7 +113,7 @@ class drive_to_pose(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = drive_to_pose()
+    node = DriveToPose()
     rclpy.spin(node)
     rclpy.shutdown()
 

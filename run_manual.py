@@ -27,16 +27,14 @@ if __name__ == "__main__":
                 case 'o':
                     print("Spit Intake")
                     INTAKE_MOTOR.set_duty(-1)
-                case '[':
-                    print("Lift Boxes")
-                    BIN_LIFT_STEPPER.set_position(2600)
-                case ']':
-                    print("Lower Boxes")
+                case '0':
                     BIN_LIFT_STEPPER.set_position(0)
-                case 'p':
-                    print("Init Boxes")
-                    BIN_LIFT_STEPPER.set_position(-1000)
-                    BIN_LIFT_STEPPER._desired_position = 0
+                case '1':
+                    BIN_LIFT_STEPPER.set_position(1)
+                case '2':
+                    BIN_LIFT_STEPPER.set_position(2)
+                case '3':
+                    BIN_LIFT_STEPPER.set_position(3)
                 case 'w':
                     print("Forward")
                     RIGHT_DRIVE_MOTOR.set_duty(DRIVE_SPEED)

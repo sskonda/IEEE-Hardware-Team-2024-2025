@@ -29,12 +29,3 @@ TAG_POINTS = [  # object points of the april tag
     [0.0,  TAG_WIDTH / 2,  TAG_WIDTH / 2,],
     [0.0, -TAG_WIDTH / 2,  TAG_WIDTH / 2,]
 ]
-
-CAMERA_CALIBRATION_FILE = "camera_calibration_data.npz"
-
-CAMERA_CONFIGURATION = {
-    "transform": {
-        "hflip": True,
-        "vflip": True,
-    }
-}

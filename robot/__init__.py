@@ -30,7 +30,6 @@ LEFT_PID_MOTOR = PIDMotor(
     max_duty=DRIVE_SPEED
 )
 
-CAMERA = Camera()
 IMU = I2C_IMU()
 DRIVE = TankDrive(LEFT_PID_MOTOR, RIGHT_PID_MOTOR)
 
@@ -50,7 +49,7 @@ STARBOARD_ULTRASONIC = Ultrasonic(4, 17)  # Starboard-Side Ultrasonic
 AFT_ULTRASONIC = Ultrasonic(27, 22)  # Aft-Side Ultrasonic
 
 ROBOT = {
-    # "INTAKE_MOTOR": INTAKE_MOTOR,
+    "INTAKE_MOTOR": INTAKE_MOTOR,
     # "INTAKE_ENCODER": INTAKE_ENCODER,
     "CLAMP_MOTOR": CLAMP_MOTOR,
     "CLAMP_ENCODER": CLAMP_ENCODER,
@@ -60,7 +59,6 @@ ROBOT = {
     # "PORT_ULTRASONIC": PORT_ULTRASONIC,
     # "STARBOARD_ULTRASONIC": STARBOARD_ULTRASONIC,
     # "AFT_ULTRASONIC": AFT_ULTRASONIC,
-    "CAMERA": CAMERA,
     "DRIVE": DRIVE,
     "IMU": IMU,
 }
@@ -103,7 +101,6 @@ def main():
     PI = pigpio.pi()
     PI.wave_clear()
 
-    camera_poses = None
     drive_poses = None
     imu_poses = None
 
@@ -121,11 +118,7 @@ def main():
         if BEACON_SERVO.initialized:
             BEACON_SERVO.set_position(0.0)
 
-        if CAMERA.initialized:
-            CAMERA.poll_for_light()
-        else:
-            input("Press Enter to start driving...")
-            pass
+        input("Press Enter to start driving...")
 
         current_position = np.array(START[:2])
         current_heading = np.array([START[2]])
@@ -137,8 +130,6 @@ def main():
 
         state = 0
 
-        if CAMERA.initialized:
-            camera_poses = []
         if IMU.initialized:
             imu_poses = []
         drive_poses = []
@@ -148,10 +139,6 @@ def main():
         while True:
             if time.time() - last_pose_time > 0.5:
                 last_pose_time = time.time()
-                if CAMERA.initialized and camera_poses is not None:
-                    position, heading = CAMERA.get_world_positon() or (None, None)
-                    if position is not None and heading is not None:
-                        camera_poses.append({"time": last_pose_time, "position": position, "heading": heading}) 
                 if IMU.initialized and imu_poses is not None:
                     imu_poses.append({"time": last_pose_time, "position": IMU.current_position, "heading": IMU.current_heading}) 
                 drive_poses.append({"time": last_pose_time, "position": DRIVE.current_position, "heading": DRIVE.current_heading})
@@ -188,8 +175,6 @@ def main():
         pass
     finally:
         t = time.asctime()
-        if camera_poses is not None:
-            np.save(f"{t}_camera_poses.npy", camera_poses)
         if imu_poses is not None:
             np.save(f"{t}_imu_poses.npy", imu_poses)
         if drive_poses is not None:

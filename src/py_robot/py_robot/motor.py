@@ -1,10 +1,11 @@
-from typing import cast
+from typing import Literal, cast
 import rclpy
 import numpy as np
 import pigpio
 
 from .pid import PID
 from .encoder import HallEncoder
+from time import sleep
 
 
 class BrushedMotor():
@@ -148,6 +149,33 @@ class StepperMotor():
         self.pi.wave_delete(self._forward_wave)
         self.pi.wave_delete(self._backward_wave)
 
+class LinearActuator():
+    def __init__(self, step_pin, direction_pin):
+        super().__init__()
+
+        self._step_pin = step_pin
+        self._direction_pin = direction_pin
+        self._step_wave = None
+        self._forward_wave = None
+        self._backward_wave = None
+    
+    def init(self, pi):
+        self.pi = pi
+        self.pi.set_mode(self._step_pin, pigpio.OUTPUT)
+        self.pi.set_mode(self._direction_pin, pigpio.OUTPUT)
+    
+    def set_position(self, position: Literal[0] | Literal[1]):
+        self.pi.write(self._direction_pin, position)
+        self.pi.write(self._step_pin, 1)
+        sleep(0.001)
+        self.pi.write(self._step_pin, 0)
+    
+    def release(self):
+        self.pi.write(self._step_pin, 0)
+        self.pi.write(self._direction_pin, 0)
+        self.pi.set_mode(self._step_pin, pigpio.INPUT)
+        self.pi.set_mode(self._direction_pin, pigpio.INPUT)
+        
 
 class PIDMotor():
     def __init__(

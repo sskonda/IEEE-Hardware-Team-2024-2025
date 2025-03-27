@@ -24,6 +24,7 @@ setup(
             'mpu6500 = py_robot.mpu6500:main',
             'tag_pose_publisher = py_robot.tag_pose_publisher:main',
             'turtle_pose_to_odom = py_robot.turtle_pose_to_odom:main',
-        ], 
+            'hardware_interface = py_robot.hardware_interface:main',
+        ],
     },
 )

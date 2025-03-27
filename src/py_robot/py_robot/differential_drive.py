@@ -62,18 +62,15 @@ class DifferentialDrive(Node):
 
         self.pi = pigpio.pi()
 
-        self.left_motor = LEFT_PID_MOTOR
-        self.right_motor = RIGHT_PID_MOTOR
-
         self.current_position = np.array([0.0, 0.0])
         self.current_heading = np.array([0.0])
 
-        self.left_motor.init(self.pi)
-        self.right_motor.init(self.pi)
+        LEFT_PID_MOTOR.init(self.pi)
+        RIGHT_PID_MOTOR.init(self.pi)
         
         self.__last_wheel_angles = np.array([
-            self.right_motor.encoder.get_angle(),
-            self.left_motor.encoder.get_angle()
+            RIGHT_PID_MOTOR.encoder.get_angle(),
+            LEFT_PID_MOTOR.encoder.get_angle()
         ])
         
         self._cmd_vel = Twist()
@@ -89,8 +86,8 @@ class DifferentialDrive(Node):
     def _periodic(self):
         # Do kinematics
         wheel_states = np.array([
-            [ self.right_motor.get_position(), self.right_motor.get_speed() ],
-            [ self.left_motor.get_position(), self.left_motor.get_speed() ]
+            [ RIGHT_PID_MOTOR.get_position(), RIGHT_PID_MOTOR.get_speed() ],
+            [ LEFT_PID_MOTOR.get_position(), LEFT_PID_MOTOR.get_speed() ]
         ])
         wheel_states[:, 0] -= self.__last_wheel_angles
         self.__last_wheel_angles = wheel_states[:, 0]
@@ -155,18 +152,18 @@ class DifferentialDrive(Node):
 
         print(self._cmd_vel)
         print(v_L, v_R)
-        self.right_motor.set_speed(v_R)
-        self.left_motor.set_speed(v_L)
+        RIGHT_PID_MOTOR.set_speed(v_R)
+        LEFT_PID_MOTOR.set_speed(v_L)
 
-        self.right_motor.update()
-        self.left_motor.update()
+        RIGHT_PID_MOTOR.update()
+        LEFT_PID_MOTOR.update()
 
     def release(self):
         """Stops and releases the motors."""
-        self.left_motor.stop()
-        self.right_motor.stop()
-        self.left_motor.release()
-        self.right_motor.release()
+        LEFT_PID_MOTOR.stop()
+        RIGHT_PID_MOTOR.stop()
+        LEFT_PID_MOTOR.release()
+        RIGHT_PID_MOTOR.release()
         self.pi.stop()
 
 

@@ -44,10 +44,6 @@ BIN_LIFT_STEPPER = StepperMotor(20, 21)  # Bin Lift Stepper
 BEACON_SERVO = ServoMotor(5)  # Beacon Servo
 MISC_SERVO = ServoMotor(6)  # Misc Servo
 
-PORT_ULTRASONIC = Ultrasonic(2, 3)  # Port-Side Ultrasonic
-STARBOARD_ULTRASONIC = Ultrasonic(4, 17)  # Starboard-Side Ultrasonic
-AFT_ULTRASONIC = Ultrasonic(27, 22)  # Aft-Side Ultrasonic
-
 ROBOT = {
     "INTAKE_MOTOR": INTAKE_MOTOR,
     # "INTAKE_ENCODER": INTAKE_ENCODER,

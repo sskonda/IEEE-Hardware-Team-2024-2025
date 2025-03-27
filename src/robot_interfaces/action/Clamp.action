@@ -2,10 +2,8 @@
 float64 position
 ---
 # Result
-bool stalled
 float64 position
 ---
 # Feedback
 float64 velocity
-float64 position
 float64 position_error

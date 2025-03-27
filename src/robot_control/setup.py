@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'py_robot'
+package_name = 'robot_control'
 
 setup(
     name=package_name,
@@ -13,17 +13,14 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='kapow',
-    maintainer_email='iyer.h.nikhil@gmail.com',
+    maintainer='katherine',
+    maintainer_email='katherine@todo.todo',
     description='TODO: Package description',
-    license='TODO: License declaration',
+    license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'differential_drive = py_robot.differential_drive:main',
-            'mpu6500 = py_robot.mpu6500:main',
-            'tag_pose_publisher = py_robot.tag_pose_publisher:main',
-            'turtle_pose_to_odom = py_robot.turtle_pose_to_odom:main',
-        ], 
+            'drive_to_pose = robot_control.drive_to_pose:main'
+        ],
     },
 )

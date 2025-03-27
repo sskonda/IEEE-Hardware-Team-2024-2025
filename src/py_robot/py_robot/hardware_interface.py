@@ -5,6 +5,7 @@ import math
 import time
 
 from std_msgs.msg import Float64, Bool
+from sensor_msgs.msg import JointState
 
 from .motor import BrushedMotor, LinearActuator, ServoMotor
 from .encoder import HallEncoder
@@ -30,7 +31,7 @@ class HardwareInterface(Node):
     def __init__(self):
         super().__init__('hardware_interface')
         
-        self.timer_period = self.declare_parameter('timer_period', 0.01).get_parameter_value().double_value
+        self._timer_period = self.declare_parameter('timer_period', 0.01).get_parameter_value().double_value
 
         self.pi = pigpio.pi()
         
@@ -43,48 +44,54 @@ class HardwareInterface(Node):
         BEACON_SERVO.init(self.pi)
         LIFT_ACTUATOR.init(self.pi)
 
+        self._pub_clamp_finished = self.create_publisher(Bool, '/clamp/finished', 1)
+        self._pub_clamp_joint = self.create_publisher(JointState, '/clamp/joint_state', 1)
+        self._sub_clamp = self.create_subscription(Float64, '/clamp', self._clamp_callback, 1)
         self._sub_intake = self.create_subscription(Float64, '/intake', self._intake_callback, 1)
+        self._pub_intake_joint = self.create_publisher(JointState, '/intake/joint_state', 1)
         self._sub_beacon = self.create_subscription(Float64, '/beacon', self._beacon_callback, 1)
         self._sub_lift = self.create_subscription(Bool, '/lift', self._lift_callback, 1)
 
-        # self._sub_intake = self.
-        # self._clamp_action_server = ActionServer(
-        #     self,
-        #     Clamp,
-        #     'clamp',
-        #     self._clamp_callback            
-        # )
+        self._timer = self.create_timer(self._timer_period, self._periodic)
 
-        # self._intake_service = self.create_service(Intake, 'intake', self._intake_callback)
-        # self._beacon_service = self.create_service(Servo, 'beacon', self._beacon_callback)
-        # self._lift_service = self.create_service(Lift, 'lift', self._lift_callback)
+    def _periodic(self):
+        self._pub_clamp_joint.publish(
+            JointState(
+                name=['clamp'],
+                position=[CLAMP_ENCODER.get_angle() / CLAMP_RATIO],
+                velocity=[CLAMP_ENCODER.get_speed() / CLAMP_RATIO],
+                effort=[CLAMP_MOTOR._duty]
+            )
+        )
 
-    # def _clamp_callback(self, goal_handle):
-    #     target_rad = goal_handle.request.position * CLAMP_RATIO
+        self._pub_intake_joint.publish(
+            JointState(
+                name=['intake'],
+                position=[INTAKE_ENCODER.get_angle()],
+                velocity=[INTAKE_ENCODER.get_speed()],
+                effort=[INTAKE_MOTOR._duty]
+            )
+        )
 
-    #     if target_rad > CLAMP_ENCODER.get_angle():
-    #         duty = 1.0
-    #     else:
-    #         duty = -1.0 
 
-    #     CLAMP_MOTOR.set_duty(duty)
-    #     time.sleep(0.75)  # Let motor spin up
+    def _clamp_callback(self, msg: Float64):
+        self._pub_clamp_finished.publish(Bool(data=False))
+        target_rad = msg.data * CLAMP_RATIO
 
-    #     feedback_msg = Clamp.Feedback()
-    #     # make sure motor is still moving and position has not been reached
-    #     while duty * (target_rad - CLAMP_ENCODER.get_angle()) > math.pi and abs(CLAMP_ENCODER.get_speed()) > 2 * math.pi:
-    #         feedback_msg.position_error = (target_rad - CLAMP_ENCODER.get_angle()) / CLAMP_RATIO
-    #         feedback_msg.velocity = CLAMP_ENCODER.get_speed() / CLAMP_RATIO
-    #         goal_handle.publish_feedback(feedback_msg)
-    #         time.sleep(0.001)
-    #     CLAMP_MOTOR.set_duty(0.0)
-
-    #     if duty * (target_rad - CLAMP_ENCODER.get_angle()) < math.pi:
-    #         goal_handle.succeed()
+        if target_rad > CLAMP_ENCODER.get_angle():
+            duty = 1.0
+        else:
+            duty = -1.0 
         
-    #     result = Clamp.Result()
-    #     result.position = CLAMP_ENCODER.get_angle() / CLAMP_RATIO
-    #     return result
+        CLAMP_MOTOR.set_duty(duty)
+        time.sleep(0.75)  # Let motor spin up
+
+        # make sure motor is still moving and position has not been reached
+        while duty * (target_rad - CLAMP_ENCODER.get_angle()) > math.pi and abs(CLAMP_ENCODER.get_speed()) > 2 * math.pi:
+            time.sleep(0.001)
+
+        CLAMP_MOTOR.set_duty(0.0)
+        self._pub_clamp_finished.publish(Bool(data=True))
     
     def _intake_callback(self, msg: Float64):
         INTAKE_MOTOR.set_duty(msg.data)

@@ -14,6 +14,7 @@ class BrushedMotor():
 
         self._forward_pin = forward_pin
         self._reverse_pin = reverse_pin
+        self._duty = 0.0
         self.speed = 0
     
     def init(self, pi: pigpio.pi):

@@ -27,8 +27,8 @@ LEFT = (LEFT_DRIVE_MOTOR, LEFT_DRIVE_ENCODER)
 
 RIGHT_PID_MOTOR = PIDMotor(
     *RIGHT,
-    position_pid=PID(1 / 60, 0, 0.1, 0.1),
-    velocity_pid=PID(0.005, 0.015, 0.0, 0.0),
+    position_pid=PID(1 / 60 / 0.0254, 0, 0.1 / 0.0254, 0.1 / 0.0254),
+    velocity_pid=PID(0.005 / 0.0254, 0.015 / 0.0254, 0.0, 0.0),
     max_duty=DRIVE_SPEED
 )
 LEFT_PID_MOTOR = PIDMotor(
@@ -57,6 +57,7 @@ class DifferentialDrive(Node):
         
         self.timer_period = self.declare_parameter('timer_period', 0.01).get_parameter_value().double_value
 
+        self.logger = self.get_logger()
         timeout = self.declare_parameter('cmd_vel_lifetime', 0.5).get_parameter_value().double_value
         self.cmd_vel_lifetime = Duration(seconds=timeout)
 
@@ -89,9 +90,10 @@ class DifferentialDrive(Node):
             [ RIGHT_PID_MOTOR.get_position(), RIGHT_PID_MOTOR.get_speed() ],
             [ LEFT_PID_MOTOR.get_position(), LEFT_PID_MOTOR.get_speed() ]
         ])
+        wheel_angles = np.array(wheel_states[:, 0])
         wheel_states[:, 0] -= self.__last_wheel_angles
-        self.__last_wheel_angles = wheel_states[:, 0]
-        
+
+        self.__last_wheel_angles = wheel_angles
         
         local_twist = (KINEMATIC @ wheel_states).T
         global_twist = (np.array([
@@ -120,8 +122,8 @@ class DifferentialDrive(Node):
                     orientation=Quaternion(
                         x=0.0,
                         y=0.0,
-                        z=np.sin(self.current_heading),
-                        w=np.cos(self.current_heading),
+                        z=np.sin(self.current_heading.item()),
+                        w=np.cos(self.current_heading.item()),
                     )
                 )
             ),
@@ -140,6 +142,7 @@ class DifferentialDrive(Node):
                 )
             )
         )
+        self.odometry_publisher.publish(odom)
 
         # Do inverse kinematics
 
@@ -150,10 +153,8 @@ class DifferentialDrive(Node):
         v_R = (V + w * DRIVE_EFFECTIVE_SPACING)
         v_L = (V - w * DRIVE_EFFECTIVE_SPACING)
 
-        print(self._cmd_vel)
-        print(v_L, v_R)
-        RIGHT_PID_MOTOR.set_speed(v_R)
-        LEFT_PID_MOTOR.set_speed(v_L)
+        RIGHT_PID_MOTOR.set_speed(2 * v_R / DRIVE_WHEEL_DIAMETER)
+        LEFT_PID_MOTOR.set_speed(2 * v_L / DRIVE_WHEEL_DIAMETER)
 
         RIGHT_PID_MOTOR.update()
         LEFT_PID_MOTOR.update()

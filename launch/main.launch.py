@@ -239,16 +239,6 @@ def generate_launch_description():
             name='hardware_interface'
         ),
         Node(
-            package='py_robot',
-            executable='button',
-            name='emergency_stop'
-        ),
-        Node(
-            package='py_robot',
-            executable='start',
-            name='start_trigger'
-        ),
-        Node(
             package='robot_control',
             executable='drive_to_pose',
             name='drive_controller',

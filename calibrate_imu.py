@@ -49,9 +49,9 @@ def undistort(data, coeffs):
     corrected_data = (eigenvectors @ scaled_data.T).T
     
     return corrected_data
+   
 
- 
- 
+
 if __name__ == '__main__':
    NUM_POSES = 15
    NUM_SAMPLES = 10000

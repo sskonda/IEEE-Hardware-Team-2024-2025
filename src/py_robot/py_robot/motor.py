@@ -164,6 +164,7 @@ class LinearActuator():
         self.pi = pi
         self.pi.set_mode(self._step_pin, pigpio.OUTPUT)
         self.pi.set_mode(self._direction_pin, pigpio.OUTPUT)
+        self.pi.write(self._step_pin,0)
     
     def set_position(self, position: Literal[0] | Literal[1]):
         self.pi.write(self._direction_pin, position)
@@ -172,7 +173,7 @@ class LinearActuator():
         self.pi.write(self._step_pin, 0)
     
     def release(self):
-        self.pi.write(self._step_pin, 0)
+        #self.pi.write(self._step_pin, 0)
         self.pi.write(self._direction_pin, 0)
         self.pi.set_mode(self._step_pin, pigpio.INPUT)
         self.pi.set_mode(self._direction_pin, pigpio.INPUT)

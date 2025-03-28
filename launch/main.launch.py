@@ -216,18 +216,18 @@ def generate_launch_description():
         ),
 
         # EKF nodes for odometry and map
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='odometry_ekf',
-            parameters=[odom_kf_parameters]
-        ),
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='map_ekf',
-            parameters=[map_kf_parameters]
-        ),
+        # Node(
+        #     package='robot_localization',
+        #     executable='ekf_node',
+        #     name='odometry_ekf',
+        #     parameters=[odom_kf_parameters]
+        # ),
+        # Node(
+        #     package='robot_localization',
+        #     executable='ekf_node',
+        #     name='map_ekf',
+        #     parameters=[map_kf_parameters]
+        # ),
 
         # AprilTag detection container
         apriltag_container,
@@ -238,6 +238,16 @@ def generate_launch_description():
             executable='hardware_interface',
             name='hardware_interface'
         ),
+        # Node(
+        #     package='py_robot',
+        #     executable='button',
+        #     name='emergency_stop'
+        # ),
+        # Node(
+        #     package='py_robot',
+        #     executable='start',
+        #     name='start_trigger'
+        # ),
         Node(
             package='robot_control',
             executable='drive_to_pose',
@@ -248,7 +258,8 @@ def generate_launch_description():
             ],
             remappings=[
                 ('/cmd_vel', '/cmd_vel'),
-                ('/odom', '/odom')
+                #('/odometry/filtered', '/filtered_odom')
+                ('/drive/odometry','/filtered_odom')
             ]
         )
     ])

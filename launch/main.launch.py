@@ -74,7 +74,15 @@ def generate_launch_description():
                 False, False, False,
                 False, False, False,
             ],
-        })
+            'initial_state': [
+                0.79375, 0.1524, 0.0,     # 
+                0.0, 0.0, -1.5708,        # angle, -90 in radians 
+                0.0, 0.0, 0.0,            # linear vel
+                0.0, 0.0, 0.0,            # angular vel
+                0.0, 0.0, 0.0             # linear accel
+            ]
+        }
+        )
 
     def to_args(d):
         return [str(val) for pair in (('--'+k, v) for k, v in d.items()) for val in pair]

@@ -28,7 +28,7 @@ class DriveToPose(Node):
         self.cmd_vel_pub.publish(initial_twist)
         self.get_logger().info("Published initial zero velocity on /cmd_vel")
 
-        self.timer = self.create_timer(0.1, self.control_loop)
+        self.timer = self.create_timer(0.05, self.control_loop)
 
         self.goal_sub = self.create_subscription(Pose2D, '/goal_pose', self.set_goal, 1)    
         self.filtered_odom = self.create_subscription(Odometry, '/filtered_odom', self.filtered_odom_callback, qos_profile=qos_profile_sensor_data)
@@ -45,15 +45,16 @@ class DriveToPose(Node):
         self.prev_linear_x = 0.0
         self.prev_angular_z = 0.0
         self.smoothing_alpha = 0.1
-        self.smoothing_position = 2.0
-        self.current_x = 0.0
-        self.current_y = 0.0
-        self.current_yaw = 0.0
+        self.smoothing_position = 0.03
+
+        self.current_x = None
+        self.current_y = None
+        self.current_yaw = None
 
         self.goal_reached = False  
 
     def control_loop(self):
-        if not self.enabled:
+        if not self.enabled or current_x == None or current_y == None or current_yaw= None:
             return
         dx = self.goal.x - self.current_x
         dy = self.goal.y - self.current_y
@@ -135,3 +136,5 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
+# Initial (x =0.79375, y=0.1524, z=0 )

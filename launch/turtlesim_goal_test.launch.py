@@ -29,11 +29,10 @@ def generate_launch_description():
                 ('/filtered_odom', '/filtered_odom')
             ]
         ),
-
         Node(
             package='robot_control',
-            executable='autonomous_node',
-            name='autonomous_node'
+            executable='autonomous',
+            name='autonomous'
         ),
     ])
 

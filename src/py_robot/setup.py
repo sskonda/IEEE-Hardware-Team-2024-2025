@@ -25,6 +25,8 @@ setup(
             'tag_pose_publisher = py_robot.tag_pose_publisher:main',
             'turtle_pose_to_odom = py_robot.turtle_pose_to_odom:main',
             'hardware_interface = py_robot.hardware_interface:main',
+            'button = py_robot.button:main',
+            'start = py_robot.start:main'
         ],
     },
 )  

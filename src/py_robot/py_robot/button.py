@@ -13,7 +13,7 @@ class HardwareStopNode(Node):
         self.twist_stop = Twist()
 
         self.pi = pigpio.pi()
-        self.gpio_pin = 20 # CHANGE AT DISCRETION DONT RUN BEFORE CHANGE GPIO PIN
+        self.gpio_pin = 7 # CHANGE AT DISCRETION DONT RUN BEFORE CHANGE GPIO PIN
         self.pi.set_mode(self.gpio_pin, pigpio.INPUT)
         self.pi.set_pull_up_down(self.gpio_pin, pigpio.PUD_UP) # ACTIVE LOW PULL UP IN SOFTWARE 
 

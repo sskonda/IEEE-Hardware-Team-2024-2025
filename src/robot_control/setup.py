@@ -21,7 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'drive_to_pose = robot_control.drive_to_pose:main',
-            'autonomous_node = robot_control.autonomous_node:main'
+            'autonomous = robot_control.autonomous:main'
         ],
     },
 )

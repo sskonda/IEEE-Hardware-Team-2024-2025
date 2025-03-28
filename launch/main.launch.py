@@ -201,12 +201,12 @@ def generate_launch_description():
             name='imu',
         ),
 
-        # Tag pose processing
-        Node(
-            package='py_robot',
-            executable='tag_pose_publisher',
-            name='tag_pose_publisher'
-        ),
+        # # Tag pose processing
+        # Node(
+        #     package='py_robot',
+        #     executable='tag_pose_publisher',
+        #     name='tag_pose_publisher'
+        # ),
 
         # Differential drive logic
         Node(
@@ -230,7 +230,7 @@ def generate_launch_description():
         # ),
 
         # AprilTag detection container
-        apriltag_container,
+        # apriltag_container,
 
         # Additional full-stack nodes
         Node(
@@ -257,9 +257,15 @@ def generate_launch_description():
                 {'angle_tolerance': 0.01}
             ],
             remappings=[
-                ('/cmd_vel', '/cmd_vel'),
                 #('/odometry/filtered', '/filtered_odom')
-                ('/drive/odometry','/filtered_odom')
+                ('/goal_pose', '/drive/goal_pose'),
+                ('/goal_done', '/drive/goal_done'),
+                ('/filtered_odom', '/drive/odometry'),
             ]
-        )
+        ),
+        Node(
+            package='robot_control', 
+            executable='autonomous',
+            name='autonomous',
+        ),
     ])

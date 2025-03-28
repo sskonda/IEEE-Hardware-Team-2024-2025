@@ -13,6 +13,7 @@ from .pid import PID
 from .motor import BrushedMotor, PIDMotor
 from .encoder import HallEncoder
 from .constants import DRIVE_SPEED, DRIVE_WHEEL_DIAMETER, DRIVE_WHEEL_OFFTANGENT, DRIVE_WHEEL_SPACING
+from .constants import DRIVE_P, DRIVE_I, DRIVE_D, DRIVE_FF
 
 DRIVE_EFFECTIVE_SPACING = DRIVE_WHEEL_SPACING / np.cos(np.radians(DRIVE_WHEEL_OFFTANGENT))
 
@@ -27,14 +28,14 @@ LEFT = (LEFT_DRIVE_MOTOR, LEFT_DRIVE_ENCODER)
 
 RIGHT_PID_MOTOR = PIDMotor(
     *RIGHT,
-    position_pid=PID(1 / 60 / 0.0254, 0, 0.1 / 0.0254, 0.1 / 0.0254),
-    velocity_pid=PID(0.005 / 0.0254, 0.015 / 0.0254, 0.0, 0.0),
+    # position_pid=PID(1 / 60 / 0.0254, 0, 0.1 / 0.0254, 0.1 / 0.0254),
+    velocity_pid=PID(DRIVE_P, DRIVE_I, DRIVE_D, DRIVE_FF),
     max_duty=DRIVE_SPEED
 )
 LEFT_PID_MOTOR = PIDMotor(
     *LEFT,
-    position_pid=PID(1 / 60, 0, 0.1, 0.1),
-    velocity_pid=PID(0.005, 0.015, 0.0, 0.0),
+    # position_pid=PID(1 / 60 / 0.0254, 0, 0.1 / 0.0254, 0.1 / 0.0254),
+    velocity_pid=PID(DRIVE_P, DRIVE_I, DRIVE_D, DRIVE_FF),
     max_duty=DRIVE_SPEED
 )
 
@@ -150,6 +151,7 @@ class DifferentialDrive(Node):
             self._cmd_vel = Twist()
         V = self._cmd_vel.linear.x
         w = self._cmd_vel.angular.z
+
         v_R = (V + w * DRIVE_EFFECTIVE_SPACING)
         v_L = (V - w * DRIVE_EFFECTIVE_SPACING)
 

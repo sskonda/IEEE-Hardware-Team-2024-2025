@@ -1,4 +1,5 @@
 import rclpy
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, Pose2D
 from std_msgs.msg import Bool
@@ -30,7 +31,7 @@ class DriveToPose(Node):
         self.timer = self.create_timer(0.1, self.control_loop)
 
         self.goal_sub = self.create_subscription(Pose2D, '/goal_pose', self.set_goal, 1)    
-        self.filtered_odom = self.create_subscription(Odometry, '/filtered_odom', self.filtered_odom_callback, 1)
+        self.filtered_odom = self.create_subscription(Odometry, '/filtered_odom', self.filtered_odom_callback, qos_profile=qos_profile_sensor_data)
 
         self.enable_sub = self.create_subscription(Bool,'/enable',self.enable_callback, 10)
         self.enabled = False 

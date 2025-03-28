@@ -1,4 +1,3 @@
-from sympy import O
 import rclpy
 from typing import cast
 

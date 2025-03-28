@@ -45,6 +45,8 @@ class DriveToPose(Node):
         self.prev_angular_z = 0.0
         self.smoothing_alpha = 0.1
         self.smoothing_position = 2.0
+        self.current_x = 0.0
+        self.current_y = 0.0
 
         self.goal_reached = False  
 

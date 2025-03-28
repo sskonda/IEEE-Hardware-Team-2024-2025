@@ -26,7 +26,9 @@ def generate_launch_description():
             ],
             remappings=[
                 ('/cmd_vel', '/turtle1/cmd_vel'),
-                ('/filtered_odom', '/filtered_odom')
+                ('/filtered_odom', '/filtered_odom'),
+                ('/goal_pose', '/drive/goal_pose'),
+                ('/goal_done','/drive/goal_done')
             ]
         ),
         Node(

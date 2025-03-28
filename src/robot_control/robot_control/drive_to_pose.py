@@ -5,6 +5,7 @@ from geometry_msgs.msg import Twist, Pose2D
 from std_msgs.msg import Bool
 import math
 from nav_msgs.msg import Odometry
+from tf_transformations import euler_from_quaternion
 
 def pos_neg(angle) -> float:
     return (angle + math.pi) % (2 * math.pi) - math.pi
@@ -59,6 +60,24 @@ class DriveToPose(Node):
         target_angle = math.atan2(dy, dx)
         angle_error = pos_neg(target_angle - self.current_yaw)
 
+        # should we go backwards?
+        robot_heading_x = math.cos(self.current_yaw)
+        robot_heading_y = math.sin(self.current_yaw)
+
+        to_goal_x = dx
+        to_goal_y = dy
+        norm = math.hypot(to_goal_x, to_goal_y)
+        if norm != 0:
+            to_goal_x /= norm
+            to_goal_y /= norm
+        dot_product = robot_heading_x * to_goal_x + robot_heading_y * to_goal_y
+        drive_backward = dot_product < 0 # flag to drive backwards 
+
+        #Correct the angle if its backwards. 
+        if drive_backward:
+            target_angle = self.normalize_angle(target_angle + math.pi)
+
+
         twist = Twist()
 
         if distance < self.smoothing_position:
@@ -69,8 +88,8 @@ class DriveToPose(Node):
         if distance > self.position_tolerance and (self.goal.x > 0 and self.goal.y > 0):
             self.get_logger().info("DRIVING TO POINT")
             if abs(angle_error) < self.angle_tolerance:
-                twist.linear.x = linear_speed
-            twist.angular.z = self.angular_speed * angle_error
+                twist.linear.x = -linear_speed if drive_backward else linear_speed
+            twist.angular.z = self.angular_gain * angle_error
 
             twist.linear.x = self.smoothing_alpha * twist.linear.x + (1 - self.smoothing_alpha) * self.prev_linear_x
             twist.angular.z = self.smoothing_alpha * twist.angular.z + (1 - self.smoothing_alpha) * self.prev_angular_z
@@ -107,7 +126,6 @@ class DriveToPose(Node):
         self.current_y = msg.pose.pose.position.y
 
         orientation_q = msg.pose.pose.orientation
-        from tf_transformations import euler_from_quaternion
         (_, _, yaw) = euler_from_quaternion([orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w])
         self.current_yaw = yaw
 
@@ -126,3 +144,4 @@ if __name__ == '__main__':
     main()
 
 # Initial (x =0.79375, y=0.1524, z=0 )
+# For Backward drive, check if the cosine of the two vectors using the dot product is negative. 

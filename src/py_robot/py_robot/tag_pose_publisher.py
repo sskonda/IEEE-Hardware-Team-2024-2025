@@ -1,3 +1,4 @@
+from sympy import O
 import rclpy
 from typing import cast
 
@@ -6,9 +7,20 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data, QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 from tf2_ros import Buffer, TransformListener
 import tf2_geometry_msgs
-from geometry_msgs.msg import Point, PoseWithCovarianceStamped, PoseWithCovariance, Pose
+from geometry_msgs.msg import Point, PoseWithCovarianceStamped, PoseWithCovariance, Pose, TransformStamped
 from std_msgs.msg import Header, Int32
 from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray
+from tf2_msgs.msg import TFMessage
+
+class CustomTransformListener(TransformListener):
+    def __init__(self, buffer: Buffer, node: Node, callback, **kwargs):
+        super().__init__(buffer, node, **kwargs)
+        self.extra_callback = callback
+
+    def callback(self, data: TFMessage):
+        super().callback(data)
+        self.extra_callback(data)
+
 
 class TagPosePublisher(Node):
     def __init__(self):
@@ -36,25 +48,34 @@ class TagPosePublisher(Node):
         ]
 
         self._tf_buffer = Buffer()
-        self._tf_listener = TransformListener(self._tf_buffer, self)
+        self._tf_listener = CustomTransformListener(self._tf_buffer, self, self._process_transform)
+        self._last_header = None
 
         self.bin_drop_id_message = Int32(data=-1)
+
+    def _process_transform(self, msg: TFMessage):
+        for transform in msg.transforms:
+            if not transform.child_frame_id.startswith('detected_tag:'):
+                continue
+
+            n = int(transform.child_frame_id.split(':')[1])
+            transform = cast(TransformStamped, transform)
+
+            robot_pose_local = PoseWithCovarianceStamped(
+                    header=transform.header,
+                )
+            robot_pose_local.header.frame_id = 'base_link'
+            
+            robot_pose_msg = self._tf_buffer.transform(robot_pose_local, f'detected_tag:{n}')
+            robot_pose_msg.header.frame_id = f'tag:{n}'
+            self.pub_tag_pose[n].publish(robot_pose_msg)
 
     def _process_detections(self, msg: AprilTagDetectionArray):
         for detection in cast(list[AprilTagDetection], msg.detections):
             n = detection.id
             if n in (0, 1, 2, 3, 4):
                 self.bin_drop_id_message = Int32(data=n)
-            publisher = self.pub_tag_pose[n]
-            robot_pose_local = PoseWithCovarianceStamped(
-                header=msg.header
-            )
-            robot_pose_local.header.frame_id = 'base_link'
             
-            robot_pose_msg = self._tf_buffer.transform(robot_pose_local, f'detected_tag:{n}')
-            robot_pose_msg.header.frame_id = f'tag:{n}'
-            publisher.publish(robot_pose_msg)
-
         self.pub_bin_drop_id.publish(self.bin_drop_id_message)
                     
 

@@ -5,6 +5,7 @@
 *.ps
 *.tar.gz
 
+rosbag2_*/
 install/
 build/
 log/

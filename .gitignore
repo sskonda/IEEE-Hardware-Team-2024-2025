@@ -1,6 +1,8 @@
 **/__pycache__/*.*
 *.png
 *.jpg
+*.pnm
+*.ps
 *.tar.gz
 
 install/

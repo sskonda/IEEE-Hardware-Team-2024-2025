@@ -1,7 +1,8 @@
+from py_robot.pid import PID
 from rclpy.node import Node
 from rclpy.qos import qos_profile_best_available
 from std_msgs.msg import Bool, Float64
-from geometry_msgs.msg import Pose2D
+from geometry_msgs.msg import Pose2D, Twist, Vector3
 
 class Goal:
     def __init__(self, node: Node):
@@ -19,13 +20,17 @@ class Goal:
     def is_finished(self) -> bool:
         return True
 
+
 class DriveToPose(Goal):
-    def __init__(self, node, x, y, theta):
+    def __init__(self, node, x, y, theta, position_tolerance=0.05, angle_tolerance=0.06):
         super().__init__(node)
         self.x=x
         self.y=y
         self.theta= theta
         self.done = False
+
+        self.position_tolerance=position_tolerance
+        self.angle_tolerance=angle_tolerance
 
     def start(self):
         super().start()

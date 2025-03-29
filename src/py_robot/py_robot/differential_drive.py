@@ -132,8 +132,8 @@ class DifferentialDrive(Node):
                     orientation=Quaternion(
                         x=0.0,
                         y=0.0,
-                        z=np.sin(self.current_heading.item()),
-                        w=np.cos(self.current_heading.item()),
+                        z=np.sin(self.current_heading.item()/2),
+                        w=np.cos(self.current_heading.item()/2),
                     )
                 )
             ),

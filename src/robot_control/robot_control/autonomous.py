@@ -4,16 +4,15 @@ from rclpy.node import Node
 import math
 from .goal import *
 
-DRIVE_FORWARD = lambda node: [
-    # DriveToPose(node, 0.5, 0.0, 0.0),
-    DriveToPose(node, 0.0, 0.0, 1.57),
+TEST_DRIVE = lambda node: [
+    DriveToPose(node, 0.0, 0.0, math.pi),
 ]
 
 class autonomous_node(Node):
     def __init__(self):
         super().__init__('autonomous_node')
 
-        self.goals = DRIVE_FORWARD(self)
+        self.goals = TEST_DRIVE(self)
         
         _ = [
             DriveToPose(self, 0.79375, 0.254, math.radians(0.0)),

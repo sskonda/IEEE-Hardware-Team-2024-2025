@@ -229,7 +229,7 @@ def generate_launch_description():
             name='drive_controller',
             parameters=[
                 {'position_tolerance': 0.0254},
-                {'angle_tolerance': 0.06},
+                {'angle_tolerance': 0.03},
             ],
             remappings=[
                 # ('/odometry/filtered', '/filtered_odom')

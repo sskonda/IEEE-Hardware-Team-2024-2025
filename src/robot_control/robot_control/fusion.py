@@ -38,7 +38,7 @@ class SensorFusion(Node):
             self._last_imu = msg
             return
         
-        dt = self._last_imu.header.stamp.sec - msg.header.stamp.sec + (self._last_imu.header.stamp.nanosec - msg.header.stamp.nanosec) / 1_000_000_000
+        dt = msg.header.stamp.sec - self._last_imu.header.stamp.sec + (msg.header.stamp.nanosec - self._last_imu.header.stamp.nanosec) / 1_000_000_000
         self.heading += msg.angular_velocity.x * dt
         self.angular_velocity = msg.angular_velocity.x
 
@@ -74,8 +74,8 @@ class SensorFusion(Node):
                         orientation=Quaternion(
                             x=0.0,
                             y=0.0,
-                            z=math.sin(self.heading),
-                            w=math.cos(self.heading),
+                            z=math.sin(self.heading/2),
+                            w=math.cos(self.heading/2),
                         )
                     )
                 ),

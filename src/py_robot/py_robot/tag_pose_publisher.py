@@ -65,11 +65,14 @@ class TagPosePublisher(Node):
                 )
             robot_pose_local.header.frame_id = 'base_link'
             
-            robot_pose_msg = self._tf_buffer.transform(robot_pose_local, f'detected_tag:{n}')
-            robot_pose_msg.header.frame_id = f'tag:{n}'
+            try:
+                robot_pose_msg = self._tf_buffer.transform(robot_pose_local, f'detected_tag:{n}')
+                robot_pose_msg.header.frame_id = f'tag:{n}'
 
-            robot_map_pose = self._tf_buffer.transform(robot_pose_msg, 'map')
-            self.pub_tag_pose[n].publish(robot_map_pose)
+                robot_map_pose = self._tf_buffer.transform(robot_pose_msg, 'map')
+                self.pub_tag_pose[n].publish(robot_map_pose)
+            except:
+                pass
 
     def _process_detections(self, msg: AprilTagDetectionArray):
         for detection in cast(list[AprilTagDetection], msg.detections):

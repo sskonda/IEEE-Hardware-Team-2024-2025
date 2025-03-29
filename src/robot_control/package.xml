@@ -7,6 +7,8 @@
   <maintainer email="katherine@todo.todo">katherine</maintainer>
   <license>Apache-2.0</license>
 
+  <exec_depend>py_robot</exec_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>

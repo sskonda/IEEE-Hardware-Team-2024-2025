@@ -37,7 +37,7 @@ def generate_launch_description():
     odom_kf_parameters = {
         'frequency': 50.0,
         'sensor_timeout': 0.02,
-        'two_d_mode': True,
+        'two_d_mode': False,
         'map_frame': 'map',
         'odom_frame': 'odom',
         'base_link_frame': 'base_link',
@@ -50,14 +50,14 @@ def generate_launch_description():
             True, True, True,
             True, True, True,
         ],
-        'imu0_remove_gravitational_acceleration': False,
+        'imu0_remove_gravitational_acceleration': True,
         'odom0': '/drive/odometry',
         'odom0_config': [
-            True, True, True,    # Linear Position
-            True, True, True,    # Angular Position
-            True, True, True,    # Linear Vel
-            False, False, False, # Angular Vel
-            False, False, False, # Linear Accel
+            True, True, False,    # Linear Position
+            False, False, False,    # Angular Position
+            False, False, False,    # Linear Vel
+            False, False, False,  # Angular Vel
+            False, False, False,  # Linear Accel
         ],
         'initial_state': [0.0] * 15,
     }
@@ -75,8 +75,8 @@ def generate_launch_description():
                 False, False, False,
             ],
             'initial_state': [
-                0.79375, 0.1524, 0.0,     # 
-                0.0, 0.0, -1.5708,        # angle, -90 in radians 
+                0.79375, 0.1524, 0.0,     #
+                0.0, 0.0, -1.5708,        # angle, -90 in radians
                 0.0, 0.0, 0.0,            # linear vel
                 0.0, 0.0, 0.0,            # angular vel
                 0.0, 0.0, 0.0             # linear accel
@@ -150,7 +150,8 @@ def generate_launch_description():
         ),
     )
 
-    robot_description = xacro.process_file('robot.xacro').toprettyxml(indent='  ')  # type: ignore
+    robot_description = xacro.process_file(
+        'robot.xacro').toprettyxml(indent='  ')  # type: ignore
 
     apriltag_container = ComposableNodeContainer(
         name='apriltag_container',
@@ -231,10 +232,10 @@ def generate_launch_description():
                 {'angle_tolerance': 0.06},
             ],
             remappings=[
-                #('/odometry/filtered', '/filtered_odom')
+                # ('/odometry/filtered', '/filtered_odom')
                 ('/goal_pose', '/drive/goal_pose'),
                 ('/goal_done', '/drive/goal_done'),
-                ('/filtered_odom', '/drive/odometry'),
+                ('/filtered_odom', '/odometry/filtered'),
                 ('/enable', '/drive/enable')
             ]
         ),
@@ -244,7 +245,8 @@ def generate_launch_description():
         #     package='robot_localization',
         #     executable='ekf_node',
         #     name='odometry_ekf',
-        #     parameters=[odom_kf_parameters]
+        #     parameters=[odom_kf_parameters],
+        #     arguments=['--log-level', 'debug']
         # ),
         # Node(
         #     package='robot_localization',
@@ -252,6 +254,13 @@ def generate_launch_description():
         #     name='map_ekf',
         #     parameters=[map_kf_parameters]
         # ),
+        Node(
+            package='robot_control',
+            executable='sensor_fusion',
+            name='sensor_fusion',
+        ),
+
+        
 
         # AprilTag detection container
         # apriltag_container,
@@ -273,7 +282,7 @@ def generate_launch_description():
         #     name='start_trigger'
         # ),
         Node(
-            package='robot_control', 
+            package='robot_control',
             executable='autonomous',
             name='autonomous',
         ),

@@ -77,11 +77,15 @@ class DifferentialDrive(Node):
         self.cmd_vel_subscription = self.create_subscription(Twist, "/cmd_vel", self._cmd_vel_received, qos_profile=qos_profile_sensor_data)
         self.enable_sub = self.create_subscription(Bool, '/drive/enable', self._enable_callback, qos_profile=qos_profile_best_available)
         self.odometry_publisher = self.create_publisher(Odometry, '/drive/odometry', qos_profile=qos_profile_sensor_data)
+        self.filtered_odom_subscriber = self.create_subscription(Odometry, '/odometry/filtered', self._filtered_odom_callback, qos_profile=qos_profile_sensor_data)
         self.timer = self.create_timer(self.timer_period, self._periodic)
         self.enabled = False
 
         LEFT_PID_MOTOR.init(self.pi)
         RIGHT_PID_MOTOR.init(self.pi)
+        
+    def _filtered_odom_callback(self, msg: Odometry):
+        self.current_heading = np.arctan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)
         
     def _enable_callback(self, msg: Bool):
         self.enabled = msg.data

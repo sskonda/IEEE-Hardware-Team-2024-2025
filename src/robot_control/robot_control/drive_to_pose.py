@@ -1,3 +1,5 @@
+from numpy import nonzero
+import numpy as np
 import rclpy
 from rclpy.qos import qos_profile_sensor_data, qos_profile_best_available
 from rclpy.node import Node
@@ -35,90 +37,69 @@ class DriveToPose(Node):
         self.goal_sub = self.create_subscription(Pose2D, '/goal_pose', self.set_goal, qos_profile=qos_profile_best_available)    
         self.filtered_odom = self.create_subscription(Odometry, '/filtered_odom', self.filtered_odom_callback, qos_profile=qos_profile_sensor_data)
 
-        self.x_odom = 0.0
-        self.y_odom = 0.0
-        self.yaw_odom = 0.0
-        self.prev_linear_x = 0.0
-        self.prev_angular_z = 0.0
-        
-        self.smoothing_alpha = 0.1
-        self.smoothing_position = 0.05
-        self.smoothing_angle = math.pi / 12
+        self.smoothing_alpha = 0.6
+        self.smoothing_position = 0.10
+        self.smoothing_angle = math.pi / 6 
 
         self.current_x = None
         self.current_y = None
         self.current_yaw = None
 
         self.goal = None
+        self._last_twist = Twist()
+    
+    def to_robot(self):
+        return np.linalg.inv(self.to_world())
+    
+    def to_world(self):
+        angle = -self.current_yaw
+        return np.array([[np.cos(angle), np.sin(angle), self.current_x], [-np.sin(angle), np.cos(angle), self.current_y], [0, 0, 1]])
 
     def control_loop(self):
-        if self.goal is None or self.current_x == None or self.current_y == None or self.current_yaw == None:
-            return
-        dx = self.goal.x - self.current_x
-        dy = self.goal.y - self.current_y
-        distance = math.hypot(dx, dy)
-        target_angle = math.atan2(dy, dx)
-        angle_error = pos_neg(target_angle - self.current_yaw)
-
-        # should we go backwards?
-        robot_heading_x = math.cos(self.current_yaw)
-        robot_heading_y = math.sin(self.current_yaw)
-
-        to_goal_x = dx
-        to_goal_y = dy
-        norm = math.hypot(to_goal_x, to_goal_y)
-        if norm != 0:
-            to_goal_x /= norm
-            to_goal_y /= norm
-        dot_product = robot_heading_x * to_goal_x + robot_heading_y * to_goal_y
-        drive_backward = dot_product < 0 # flag to drive backwards 
-
-        #Correct the angle if its backwards. 
-        if drive_backward:
-            target_angle = self.normalize_angle(target_angle + math.pi)
-
-
         twist = Twist()
+        if self.goal is None or self.current_x == None or self.current_y == None or self.current_yaw == None:
+            self.cmd_vel_pub.publish(twist)
+            return
 
-        if distance < self.smoothing_position:
-            linear_speed = self.linear_speed * (distance / self.smoothing_position)
-        else:
-            linear_speed = self.linear_speed
-
-        if distance > self.position_tolerance and (self.goal.x > 0 and self.goal.y > 0):
-            self.get_logger().info("DRIVING TO POINT")
-            if abs(angle_error) < self.angle_tolerance:
-                twist.linear.x = -linear_speed if drive_backward else linear_speed
-            twist.angular.z = self.angular_gain * angle_error
-
-            twist.linear.x = self.smoothing_alpha * twist.linear.x + (1 - self.smoothing_alpha) * self.prev_linear_x
-            twist.angular.z = self.smoothing_alpha * twist.angular.z + (1 - self.smoothing_alpha) * self.prev_angular_z
-
-            self.prev_linear_x = twist.linear.x
-            self.prev_angular_z = twist.angular.z
-        else:
-            self.get_logger().info(str(self.goal.theta - self.current_yaw))
-            final_angle_error = pos_neg(self.goal.theta - self.current_yaw) #  pos_neg(self.goal.theta - self.current_yaw)
-            if abs(final_angle_error) > self.angle_tolerance:
-                self.get_logger().info(f"AT POINT (ROTATING ERROR: {final_angle_error})")
-
-                if abs(final_angle_error) < self.smoothing_angle:
-                    twist.angular.z = self.angular_speed * (final_angle_error / self.smoothing_angle)
+        if self.goal.x >= 0 and self.goal.y >= 0:
+            error = (self.to_robot() @ np.array([self.goal.x, self.goal.y, 1]))[:2]
+            distance = np.linalg.norm(error)
+            if distance > self.position_tolerance:
+                angle_error = math.atan2(error[1], error[0])
+                
+                twist.linear.x = np.copysign(self.linear_speed, error[0])
+                if twist.linear.x > 0:
+                    twist.angular.z = pos_neg(angle_error)
                 else:
-                    twist.angular.z = math.copysign(self.angular_speed, final_angle_error)
-
-                twist.linear.x = 0.0
-
-                self.prev_linear_x = twist.linear.x
-                self.prev_angular_z = twist.angular.z
-
+                    twist.angular.z = pos_neg(angle_error - math.pi)
+                
+                if distance < self.smoothing_position:
+                    twist.linear.x *= distance / self.smoothing_position
             else:
-                twist.linear.x = 0.0
-                twist.angular.z = 0.0
-                self.get_logger().info("Goal reached.")
+                self.get_logger().info("Position reached.")
                 self.goal_done_pub.publish(Bool(data=True))
                 self.goal = None
+                self._last_twist = Twist()
+        else:
+            angle_error = pos_neg(self.goal.theta - self.current_yaw)
 
+            if abs(angle_error) > self.angle_tolerance:
+                twist.linear.x = 0.0
+                twist.angular.z = np.copysign(self.angular_speed, angle_error) 
+                if abs(angle_error) > self.smoothing_angle:
+                    twist.angular.z *= abs(angle_error) / self.smoothing_angle
+            else:
+                self.get_logger().info("Heading reached.")
+                self.goal_done_pub.publish(Bool(data=True))
+                self.goal = None
+                self._last_twist = Twist()
+
+        if twist.linear.x != 0.0:
+            twist.linear.x = self.smoothing_alpha * twist.linear.x + (1 - self.smoothing_alpha) * self._last_twist.linear.x       
+        if twist.angular.z != 0.0:
+            twist.angular.z = self.smoothing_alpha * twist.angular.z + (1 - self.smoothing_alpha) * self._last_twist.angular.z
+
+        self._last_twist = twist
         self.cmd_vel_pub.publish(twist)
 
     def filtered_odom_callback(self, msg):

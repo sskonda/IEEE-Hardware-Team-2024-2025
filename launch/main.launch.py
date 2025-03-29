@@ -228,8 +228,12 @@ def generate_launch_description():
             executable='drive_to_pose',
             name='drive_controller',
             parameters=[
-                {'position_tolerance': 0.0254},
-                {'angle_tolerance': 0.03},
+                {
+                    'position_tolerance': 0.0254,
+                    'angle_tolerance': 0.03,
+                    'max_speed': 0.3,
+                    'max_angular_speed': 0.333,
+                },
             ],
             remappings=[
                 # ('/odometry/filtered', '/filtered_odom')

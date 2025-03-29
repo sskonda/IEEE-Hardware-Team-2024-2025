@@ -20,9 +20,17 @@ class SensorFusion(Node):
 
         self.odom_pub = self.create_publisher(Odometry, '/odometry/filtered', qos_profile=qos_profile_sensor_data)
         
-        self.heading = 0.0
-        self.x = 0.0
-        self.y = 0.0
+        initial_pose = [
+                0.79375, 0.1524, 0.0,     #
+                0.0, 0.0, -1.5708,        # angle, -90 in radians
+                0.0, 0.0, 0.0,            # linear vel
+                0.0, 0.0, 0.0,            # angular vel
+                0.0, 0.0, 0.0             # linear accel
+        ]
+
+        self.heading = -math.pi
+        self.x = 0.79375
+        self.y = 0.1524
         
         self.angular_velocity = 0.0
         self.vx = 0.0

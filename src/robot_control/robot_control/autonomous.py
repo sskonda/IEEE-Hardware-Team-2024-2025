@@ -5,7 +5,21 @@ import math
 from .goal import *
 
 TEST_DRIVE = lambda node: [
-    DriveToPose(node, 0.0, 0.0, math.pi),
+    Lift(node),
+    WithTimeout(node, 3.0),
+    Lift(node),
+    WithTimeout(node, 3.0),
+    # Clamp(node, 1.0),
+    # WithTimeout(node, 1.0),
+    # Clamp(node, -1.0),
+    # WithTimeout(node, 1.0),
+    # Clamp(node, 0.5),
+    # WithTimeout(node, 1.0),
+    # Clamp(node, -1.0)
+    # DriveToPose(node, 0.5, 0.0, 0.0),
+    # WithTimeout(node, 1.0),
+    # DriveToPose(node, 0.0, 0.0, 0.0),
+    # DriveToPose(node, -1.0, -1.0, math.pi/2)
 ]
 
 class autonomous_node(Node):

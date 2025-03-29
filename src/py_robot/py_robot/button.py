@@ -21,7 +21,7 @@ class HardwareStopNode(Node):
         self.pi = pigpio.pi()
         self.gpio_pin = 7  # !!! CHANGE THIS TO YOUR ACTUAL PIN
         self.pi.set_mode(self.gpio_pin, pigpio.INPUT)
-        self.pi.set_pull_up_down(self.gpio_pin, pigpio.PUD_UP)  # Active low
+        self.pi.set_pull_up_down(self.gpio_pin, pigpio.PUP_DOWN)  # Active low
 
         self.last_state = 1  # Track last button state
         self.timer = self.create_timer(0.05, self.monitor_button)

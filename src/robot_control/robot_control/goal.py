@@ -3,6 +3,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_best_available
 from std_msgs.msg import Bool, Float64
 from geometry_msgs.msg import Pose2D, Twist, Vector3
+import time
 
 class Goal:
     def __init__(self, node: Node):
@@ -19,6 +20,18 @@ class Goal:
 
     def is_finished(self) -> bool:
         return True
+
+
+class WithTimeout(Goal):
+    def __init__(self, node, seconds, **kwargs):
+        super().__init__(node)
+        self.seconds = seconds
+        
+    def start(self):
+        self.start_time = time.time()
+
+    def is_finished(self) -> bool:
+        return time.time() - self.start_time > self.seconds
 
 
 class DriveToPose(Goal):
@@ -59,33 +72,38 @@ class DriveToPose(Goal):
         self.done= msg.data
 
 class Clamp(Goal):
-    def __init__(self, node, position):
+    def __init__(self, node, duty):
         super().__init__(node)
-        self.position= Float64(data=position)
+        self.duty = Float64(data=duty)
         self.done=False
+
     def start(self):
         super().start() 
-        self.goal_done_sub = self.node.create_subscription(Float64, '/clamp/goal_done', self.clamp_done_callback, 1)
+        self.goal_done_sub = self.node.create_subscription(Bool, '/clamp/goal_done', self.clamp_done_callback, 1)
         self.goal_pub = self.node.create_publisher(Float64, '/clamp', 10)
-        self.goal_pub.publish(self.position)
-        self.node.get_logger().info(f" Published goal: {self.position}")
+        self.goal_pub.publish(self.duty)
+        self.node.get_logger().info(f" Published goal: {self.duty}")
+
     def is_finished(self):
         return self.done
+
     def end(self):
         self.node.destroy_subscription(self.goal_done_sub)
         self.node.destroy_publisher(self.goal_pub)    
+
     def clamp_done_callback(self, msg):
         self.done = msg.data
 
 class Lift(Goal):
-    def __init__(self, node, position):
+    def __init__(self, node):
         super().__init__(node)
-        self.position= Float64(data=position)
+        
     def start(self):
         super().start() 
-        self.goal_pub = self.node.create_publisher(Float64, '/lift', 10)
-        self.goal_pub.publish(self.position)
-        self.node.get_logger().info(f" Published goal: {self.position}")
+        self.goal_pub = self.node.create_publisher(Bool, '/lift', 1)
+        self.goal_pub.publish(Bool())
+        self.node.get_logger().info(f" Published /lift")
+
     def end(self):
         self.node.destroy_publisher(self.goal_pub)    
 

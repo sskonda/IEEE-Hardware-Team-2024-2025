@@ -75,12 +75,13 @@ class MPU6500(Node):
         data = self.__read_device()       
         if data is not None:
             linear_acceleration, angular_velocity = data
+            self.orientation = angular_velocity
             msg = Imu(
                 header=Header(
                     stamp=self.get_clock().now().to_msg(),
                     frame_id=self.frame_id
                 ),
-                # orientation=,
+                # orientation=
                 orientation_covariance=[-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # Orientation is not provided
                 angular_velocity = Vector3(x=angular_velocity[0], y=angular_velocity[1], z=angular_velocity[2]),
                 angular_velocity_covariance = self.angular_covariance,

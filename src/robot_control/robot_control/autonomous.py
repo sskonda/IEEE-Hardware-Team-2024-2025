@@ -6,7 +6,7 @@ from .goal import *
 
 DRIVE_FORWARD = lambda node: [
     # DriveToPose(node, 0.5, 0.0, 0.0),
-    DriveToPose(node, 2.0, 0.0, 0.0),
+    DriveToPose(node, 0.0, 0.0, 1.57),
 ]
 
 class autonomous_node(Node):

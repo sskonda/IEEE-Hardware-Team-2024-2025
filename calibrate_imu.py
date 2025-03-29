@@ -91,15 +91,23 @@ if __name__ == '__main__':
       start_time = time.time()
       print(f"Who Am I {pi.i2c_read_byte_data(h, MPU_6050_WHO_AM_I)}")
 
-      for n in range(NUM_POSES):
+      n = 0
+      while n < NUM_POSES:
          input(f"Press enter once the robot is stable...")
-         print(f"Recording...")
+         print(f"Recording {n}...")
          for i in tqdm(range(NUM_SAMPLES)):
             (s, b) = pi.i2c_read_i2c_block_data(h, MPU_6050_ACCEL_XOUT_H, 6 + 2 + 6)
 
             if s >= 0:
                # > = big endian
-               calibration_data[n*NUM_POSES + i] = struct.unpack('>3hxx3h', b)
+               idx = n * NUM_SAMPLES + i
+               calibration_data[idx] = struct.unpack('>3hxx3h', b)
+            else:
+               print("Failed...")
+         if input("Accept? (Y/n)") == 'n':
+            continue
+         else:
+            n += 1
 
       calib_mean = np.mean(calibration_data, axis=0)
       print(calib_mean[:3])

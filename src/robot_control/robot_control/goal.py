@@ -1,4 +1,5 @@
 from rclpy.node import Node
+from rclpy.qos import qos_profile_best_available
 from std_msgs.msg import Bool, Float64
 from geometry_msgs.msg import Pose2D
 
@@ -19,27 +20,36 @@ class Goal:
         return True
 
 class DriveToPose(Goal):
-    def __init__(self, node, x, y, theta, position_tolerance=0.05, angle_tolerance=0.01):
+    def __init__(self, node, x, y, theta):
         super().__init__(node)
         self.x=x
         self.y=y
         self.theta= theta
         self.done = False
+
     def start(self):
         super().start()
         self.goal_done_sub = self.node.create_subscription(Bool, '/drive/goal_done', self.drive_done_callback, 1)
-        self.goal_pub = self.node.create_publisher(Pose2D, '/drive/goal_pose', 1)
+        self.enable_pub = self.node.create_publisher(Bool, '/drive/enable', qos_profile=qos_profile_best_available)
+        self.goal_pub = self.node.create_publisher(Pose2D, '/drive/goal_pose', qos_profile=qos_profile_best_available)
         self.node.get_logger().info(f" Published goal: x={self.x:.2f}, y={self.y:.2f}, θ={self.theta:.2f}")
 
-    def repeated(self):
         pose = Pose2D(x=self.x, y=self.y, theta=self.theta)
         self.goal_pub.publish(pose)
         
+        self.node.get_logger().info("ENABLE DRIVE TO POSE")
+        self.enable_pub.publish(Bool(data=True))
+
     def is_finished(self):
         return self.done
+
     def end(self): 
+        self.enable_pub.publish(Bool(data=False))
+
         self.node.destroy_subscription(self.goal_done_sub)
         self.node.destroy_publisher(self.goal_pub)
+        self.node.destroy_publisher(self.enable_pub)
+
     def drive_done_callback(self, msg):
         self.done= msg.data
 

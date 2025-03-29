@@ -53,11 +53,11 @@ def generate_launch_description():
         'imu0_remove_gravitational_acceleration': False,
         'odom0': '/drive/odometry',
         'odom0_config': [
-            True, True, True,
-            True, True, True,
-            True, True, True,
-            False, False, False,
-            False, False, False,
+            True, True, True,    # Linear Position
+            True, True, True,    # Angular Position
+            True, True, True,    # Linear Vel
+            False, False, False, # Angular Vel
+            False, False, False, # Linear Accel
         ],
         'initial_state': [0.0] * 15,
     }
@@ -222,6 +222,22 @@ def generate_launch_description():
             executable='differential_drive',
             name='drive'
         ),
+        Node(
+            package='robot_control',
+            executable='drive_to_pose',
+            name='drive_controller',
+            parameters=[
+                {'position_tolerance': 0.0254},
+                {'angle_tolerance': 0.06},
+            ],
+            remappings=[
+                #('/odometry/filtered', '/filtered_odom')
+                ('/goal_pose', '/drive/goal_pose'),
+                ('/goal_done', '/drive/goal_done'),
+                ('/filtered_odom', '/drive/odometry'),
+                ('/enable', '/drive/enable')
+            ]
+        ),
 
         # EKF nodes for odometry and map
         # Node(
@@ -256,21 +272,6 @@ def generate_launch_description():
         #     executable='start',
         #     name='start_trigger'
         # ),
-        Node(
-            package='robot_control',
-            executable='drive_to_pose',
-            name='drive_controller',
-            parameters=[
-                {'position_tolerance': 0.1},
-                {'angle_tolerance': 0.01}
-            ],
-            remappings=[
-                #('/odometry/filtered', '/filtered_odom')
-                ('/goal_pose', '/drive/goal_pose'),
-                ('/goal_done', '/drive/goal_done'),
-                ('/filtered_odom', '/drive/odometry'),
-            ]
-        ),
         Node(
             package='robot_control', 
             executable='autonomous',

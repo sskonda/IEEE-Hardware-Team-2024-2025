@@ -34,8 +34,7 @@ class HardwareStopNode(Node):
                 self.get_logger().info("Button pressed: initializing robot.")
                 self.enable_pub.publish(Bool(data=True))
                 self.go_pub.publish(Bool(data=True))
-                self.robot_initialized 
-                = True
+                self.robot_initialized = True
             else:
                 self.get_logger().error("Hardware kill switch triggered.")
                 self.kill_triggered = True

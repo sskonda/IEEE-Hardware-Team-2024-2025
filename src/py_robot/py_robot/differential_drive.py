@@ -1,11 +1,11 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import qos_profile_sensor_data, qos_profile_best_available
 from rclpy.time import Duration
 import numpy as np 
 import pigpio
 
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Bool
 from geometry_msgs.msg import Vector3, Point, Quaternion, Twist, Pose, PoseWithCovariance, TwistWithCovariance
 from nav_msgs.msg import Odometry
 
@@ -67,9 +67,6 @@ class DifferentialDrive(Node):
         self.current_position = np.array([0.0, 0.0])
         self.current_heading = np.array([0.0])
 
-        LEFT_PID_MOTOR.init(self.pi)
-        RIGHT_PID_MOTOR.init(self.pi)
-        
         self.__last_wheel_angles = np.array([
             RIGHT_PID_MOTOR.encoder.get_angle(),
             LEFT_PID_MOTOR.encoder.get_angle()
@@ -78,8 +75,16 @@ class DifferentialDrive(Node):
         self._cmd_vel = Twist()
         self._cmd_vel_stamp = None
         self.cmd_vel_subscription = self.create_subscription(Twist, "/cmd_vel", self._cmd_vel_received, qos_profile=qos_profile_sensor_data)
+        self.enable_sub = self.create_subscription(Bool, '/drive/enable', self._enable_callback, qos_profile=qos_profile_best_available)
         self.odometry_publisher = self.create_publisher(Odometry, '/drive/odometry', qos_profile=qos_profile_sensor_data)
         self.timer = self.create_timer(self.timer_period, self._periodic)
+        self.enabled = False
+
+        LEFT_PID_MOTOR.init(self.pi)
+        RIGHT_PID_MOTOR.init(self.pi)
+        
+    def _enable_callback(self, msg: Bool):
+        self.enabled = msg.data
         
     def _cmd_vel_received(self, msg: Twist):
         self._cmd_vel_stamp = self.get_clock().now()
@@ -145,21 +150,28 @@ class DifferentialDrive(Node):
         )
         self.odometry_publisher.publish(odom)
 
+
         # Do inverse kinematics
+        self.get_logger().info("Enabled (DRIVE): " + str(self.enabled))
+        if self.enabled:
+            if self._cmd_vel_stamp is None or (self.get_clock().now() - self._cmd_vel_stamp) > self.cmd_vel_lifetime:
+                self._cmd_vel = Twist()
+            V = self._cmd_vel.linear.x
+            w = self._cmd_vel.angular.z
 
-        if self._cmd_vel_stamp is None or (self.get_clock().now() - self._cmd_vel_stamp) > self.cmd_vel_lifetime:
-            self._cmd_vel = Twist()
-        V = self._cmd_vel.linear.x
-        w = self._cmd_vel.angular.z
+            v_R = (V + w * DRIVE_EFFECTIVE_SPACING)
+            v_L = (V - w * DRIVE_EFFECTIVE_SPACING)
 
-        v_R = (V + w * DRIVE_EFFECTIVE_SPACING)
-        v_L = (V - w * DRIVE_EFFECTIVE_SPACING)
+            RIGHT_PID_MOTOR.set_speed(2 * v_R / DRIVE_WHEEL_DIAMETER)
+            LEFT_PID_MOTOR.set_speed(2 * v_L / DRIVE_WHEEL_DIAMETER)
 
-        RIGHT_PID_MOTOR.set_speed(2 * v_R / DRIVE_WHEEL_DIAMETER)
-        LEFT_PID_MOTOR.set_speed(2 * v_L / DRIVE_WHEEL_DIAMETER)
-
-        RIGHT_PID_MOTOR.update()
-        LEFT_PID_MOTOR.update()
+            RIGHT_PID_MOTOR.update()
+            LEFT_PID_MOTOR.update()
+        else:
+            RIGHT_PID_MOTOR.duty_motor.set_duty(0.0)
+            LEFT_PID_MOTOR.duty_motor.set_duty(0.0)
+            RIGHT_PID_MOTOR.velocity_pid.reset()
+            LEFT_PID_MOTOR.velocity_pid.reset()
 
     def release(self):
         """Stops and releases the motors."""

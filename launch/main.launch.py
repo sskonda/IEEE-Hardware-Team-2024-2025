@@ -210,12 +210,12 @@ def generate_launch_description():
             name='imu',
         ),
 
-        # # Tag pose processing
-        # Node(
-        #     package='py_robot',
-        #     executable='tag_pose_publisher',
-        #     name='tag_pose_publisher'
-        # ),
+        # Tag pose processing
+        Node(
+            package='py_robot',
+            executable='tag_pose_publisher',
+            name='tag_pose_publisher'
+        ),
 
         # Differential drive logic
         Node(
@@ -263,7 +263,7 @@ def generate_launch_description():
         
 
         # AprilTag detection container
-        # apriltag_container,
+        apriltag_container,
 
         # Additional full-stack nodes
         Node(

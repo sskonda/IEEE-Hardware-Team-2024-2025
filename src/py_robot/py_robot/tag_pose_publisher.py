@@ -67,7 +67,9 @@ class TagPosePublisher(Node):
             
             robot_pose_msg = self._tf_buffer.transform(robot_pose_local, f'detected_tag:{n}')
             robot_pose_msg.header.frame_id = f'tag:{n}'
-            self.pub_tag_pose[n].publish(robot_pose_msg)
+
+            robot_map_pose = self._tf_buffer.transform(robot_pose_msg, 'map')
+            self.pub_tag_pose[n].publish(robot_map_pose)
 
     def _process_detections(self, msg: AprilTagDetectionArray):
         for detection in cast(list[AprilTagDetection], msg.detections):

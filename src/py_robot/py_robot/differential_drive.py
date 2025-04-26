@@ -164,7 +164,6 @@ class DifferentialDrive(Node):
 
 
         # Do inverse kinematics
-        self.get_logger().info("Enabled (DRIVE): " + str(self.enabled))
         if self.enabled:
             if self._cmd_vel_stamp is None or (self.get_clock().now() - self._cmd_vel_stamp) > self.cmd_vel_lifetime:
                 self._cmd_vel = Twist()

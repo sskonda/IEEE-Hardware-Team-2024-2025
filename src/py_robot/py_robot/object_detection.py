@@ -25,7 +25,7 @@ class ObjectDetection(Node):
 
         # camera info subscriber
         self.create_subscription(CameraInfo, "/camera/camera_info", self.camera_info_callback, 10)
-        self.create_subscription(Image, "/camera/image_color_rect", self.image_callback, 10)
+        self.create_subscription(Image, "/camera/image_rect", self.image_callback, 10)
 
         self.robot_pose_pub = self.create_publisher(PoseStamped, "/robot/pose", 10)
         self.purple_dots_pub = self.create_publisher(PoseArray, "/purple_dots", 10)

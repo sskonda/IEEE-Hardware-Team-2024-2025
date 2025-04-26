@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'object_detection = py_robot.object_detection:main',
             'differential_drive = py_robot.differential_drive:main',
             'mpu6500 = py_robot.mpu6500:main',
             'tag_pose_publisher = py_robot.tag_pose_publisher:main',

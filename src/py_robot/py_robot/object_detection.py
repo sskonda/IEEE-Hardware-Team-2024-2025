@@ -54,8 +54,7 @@ class ObjectDetection(Node):
         return np.array([x, y, z])
 
     def image_callback(self, msg: Image):
-        try:
-            frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         lower_purple = np.array([120, 80, 40])
@@ -63,7 +62,7 @@ class ObjectDetection(Node):
         mask = cv2.inRange(hsv, lower_purple, upper_purple)
 
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+    
         poses = []
         for contour in sorted(contours, key=cv2.contourArea, reverse=True):
             area = cv2.contourArea(contour)
@@ -76,17 +75,17 @@ class ObjectDetection(Node):
             distance = self.calculate_distance(area)
             point_cam = self.image_to_camera_3d(x_center, y_center, distance)
 
-            try:
-                point_msg = PointStamped()
-                point_msg.header.frame_id = self.camera_frame
-                point_msg.header.stamp = msg.header.stamp
-                point_msg.point.x, point_msg.point.y, point_msg.point.z = point_cam.tolist()
 
-                point_world = self.tf_buffer.transform(point_msg, self.map_frame, timeout=rclpy.duration.Duration(seconds=0.5))
+            point_msg = PointStamped()
+            point_msg.header.frame_id = self.camera_frame
+            point_msg.header.stamp = msg.header.stamp
+            point_msg.point.x, point_msg.point.y, point_msg.point.z = point_cam.tolist()
 
-                pose = Pose()
-                pose.position = point_world.point
-                poses.append(pose)
+            point_world = self.tf_buffer.transform(point_msg, self.map_frame, timeout=rclpy.duration.Duration(seconds=0.5))
+
+            pose = Pose()
+            pose.position = point_world.point
+            poses.append(pose)
 
         # first pose is the  robot
         robot_pose_msg = PoseStamped()

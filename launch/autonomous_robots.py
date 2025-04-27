@@ -25,7 +25,7 @@ def generate_launch_description():
         name='purple_container',
         namespace='camera',  # <--- Put everything in 'camera' namespace
         package='rclcpp_components',
-        executable='camera_container',
+        executable='component_container',
         composable_node_descriptions=[
             
             # 1) Camera driver node

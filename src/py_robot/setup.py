@@ -27,6 +27,7 @@ setup(
             'turtle_pose_to_odom = py_robot.turtle_pose_to_odom:main',
             'hardware_interface = py_robot.hardware_interface:main',
             'button = py_robot.button:main',
+            'path_planner = py_robot.path:main',
             'start = py_robot.start:main'
         ],
     },

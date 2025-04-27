@@ -25,7 +25,7 @@ def generate_launch_description():
         name='purple_container',
         namespace='camera',  # <--- Put everything in 'camera' namespace
         package='rclcpp_components',
-        executable='component_container',
+        executable='camera_container',
         composable_node_descriptions=[
             
             # 1) Camera driver node
@@ -48,7 +48,7 @@ def generate_launch_description():
                     ('camera_info', 'camera_info'),
                     ('image_rect',  'image_rect'),  # output topic
                 ],
-                extra_arguments=[{'use_intra_process_comms': True}]
+                extra_arguments=[{'use_intra_process_comms': False}]
             ),
         ],
     )
@@ -114,6 +114,14 @@ def generate_launch_description():
             package='py_robot',
             executable='object_detection',
             name='object_detection',
+        ),
+        Node(
+            package='py_robot',
+            executable='path_planner',
+            remappings=[
+                ('/points_to_visit', '/purple_dots')
+            ],
+            name='path_planner'
         ),
         # AprilTag detection container
         camera_container,

@@ -26,7 +26,6 @@ class NearestNeighborPlanner(Node):
 
         out_msg = PoseArray() #new PoseArray message
         out_msg.header = msg.header #copies header in received message
-        out_msg.header.frame_id = 'map' 
         out_msg.poses = ordered 
         self.publisher.publish(out_msg) #publishes ordered points
 

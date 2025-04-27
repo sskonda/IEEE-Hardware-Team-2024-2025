@@ -34,7 +34,7 @@ def generate_launch_description():
                 plugin='camera::CameraNode',
                 name='camera',
                 parameters=[camera_parameters],
-                extra_arguments=[{'use_intra_process_comms': True}]
+                extra_arguments=[{'use_intra_process_comms': False}]
             ),
 
             # 3) Rectify node

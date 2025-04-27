@@ -66,14 +66,14 @@ class ObjectDetection(Node):
             debug_frame[0*height:1*height] = frame
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        lower_purple = np.array([120, 70, 120])
-        upper_purple = np.array([140, 255, 255])
+        lower_purple = np.array([113, 195, 150])
+        upper_purple = np.array([127, 255, 255])
         mask = cv2.inRange(hsv, lower_purple, upper_purple)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8), iterations=4)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
 
         if self.debug:
-            debug_frame[1*height:2*height] = mask[:, :, None]
+            debug_frame[1*height:2*height][mask[:, :] == 255] = frame[mask[:, :] == 255]
             debug_frame[2*height:3*height] = frame
 
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -124,7 +124,7 @@ class ObjectDetection(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ObjectDetection()
+    node = ObjectDetection(debug=True)
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

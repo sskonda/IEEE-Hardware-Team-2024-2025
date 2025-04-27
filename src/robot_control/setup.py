@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'drive_to_pose = robot_control.drive_to_pose:main',
+            'drive_to_path = robot_control.drive_to_path:main',
             'autonomous = robot_control.autonomous:main',
             'sensor_fusion = robot_control.fusion:main',
         ],

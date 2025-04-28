@@ -66,7 +66,7 @@ class ObjectDetection(Node):
             debug_frame[0*height:1*height] = frame
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        lower_purple = np.array([113, 195, 150])
+        lower_purple = np.array([113, 195, 100])
         upper_purple = np.array([127, 255, 255])
         mask = cv2.inRange(hsv, lower_purple, upper_purple)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8), iterations=4)
@@ -121,7 +121,7 @@ class ObjectDetection(Node):
         pose_array_msg.poses = poses
 
         if self.debug:
-            self.debug_pub.publish(self.bridge.cv2_to_imgmsg(debug_frame, encoding="bgr8"))
+            self.debug_pub.publish(self.bridge.cv2_to_imgmsg(debug_frame[::-1, ::-1], encoding="bgr8"))
         self.purple_dots_pub.publish(pose_array_msg)
 
         # self.get_logger().info(f"Published {len(poses)} purple dot(s).")

@@ -69,6 +69,11 @@ def generate_launch_description():
         ),
         # AprilTag detection container
         camera_container,
+        Node(
+            package='py_robot',
+            executable='object_detection',
+            name='object_detection',
+        ),
         # Additional full-stack nodes
         Node(
             package='py_robot',
@@ -87,9 +92,4 @@ def generate_launch_description():
             executable='sensor_fusion',
             name='sensor_fusion',
         ),
-        Node(
-            package='web_video_server',
-            executable='web_video_server',
-            name='web_video_server',
-        )
     ])

@@ -69,7 +69,6 @@ class DriveToPath(Node):
             self.cmd_vel_pub.publish(twist)
             return
 
-        self.get_logger().info(f"Tracking waypoint {self.current_goal_idx+1}/{len(self.path)}")
         goal = self.path[self.current_goal_idx]
 
         dx = goal.x - self.current_x
@@ -117,19 +116,17 @@ class DriveToPath(Node):
             final_angle_error = self.normalize_angle(goal.theta - self.current_yaw)
             if abs(final_angle_error) > self.angle_tolerance:
                 twist.angular.z = self.angular_gain * final_angle_error
-                self.get_logger().info(f"Angle error: {final_angle_error}")
                 if abs(twist.angular.z) < 0.5:
                     twist.angular.z = 0.5 * (1 if twist.angular.z > 0 else -1)
                 twist.linear.x = 0.0
 
-                self.get_logger().info(f"twist: {twist.linear.x}, {twist.angular.z}")
                 twist.angular.z = 0.3 * twist.angular.z + 0.7 * self.prev_angular_z
 
                 self.prev_linear_x = twist.linear.x
                 self.prev_angular_z = twist.angular.z
 
             else:
-                self.get_logger().info("Goal reached.")
+                self.get_logger().info(f"Waypoint {self.current_goal_idx+1}/{len(self.path)} reached.")
                 self.current_goal_idx += 1
                 self.drive_straight = 100
                 if self.current_goal_idx >= len(self.path):

@@ -173,6 +173,11 @@ class DifferentialDrive(Node):
             v_R = (V + w * DRIVE_EFFECTIVE_SPACING)
             v_L = (V - w * DRIVE_EFFECTIVE_SPACING)
 
+            if abs(v_R) < 0.03:
+                v_R = 0.0
+            if abs(v_L) < 0.03:
+                v_L = 0.0
+
             RIGHT_PID_MOTOR.set_speed(2 * v_R / DRIVE_WHEEL_DIAMETER)
             LEFT_PID_MOTOR.set_speed(2 * v_L / DRIVE_WHEEL_DIAMETER)
 
@@ -199,7 +204,7 @@ def main(args=None):
     
     try:
         rclpy.spin(drive)
-    finally:
+    finally: 
         drive.release()
         drive.destroy_node()
 

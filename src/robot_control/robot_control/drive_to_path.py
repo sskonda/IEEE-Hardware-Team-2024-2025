@@ -12,9 +12,9 @@ class DriveToPath(Node):
         super().__init__('drive_to_path')
 
         # PARAMETERS 
-        self.position_tolerance = self.declare_parameter("position_tolerance", 0.01).get_parameter_value().double_value
-        self.angle_tolerance = self.declare_parameter("angle_tolerance", 0.01).get_parameter_value().double_value
-        self.linear_gain = self.declare_parameter("max_speed", 0.5).get_parameter_value().double_value
+        self.position_tolerance = self.declare_parameter("position_tolerance", 0.05).get_parameter_value().double_value
+        self.angle_tolerance = self.declare_parameter("angle_tolerance", 0.5).get_parameter_value().double_value
+        self.linear_gain = self.declare_parameter("max_speed", 0.05).get_parameter_value().double_value
         self.angular_gain = self.declare_parameter("max_angular_speed", 0.5).get_parameter_value().double_value
 
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
@@ -37,6 +37,9 @@ class DriveToPath(Node):
         self.smoothing_alpha = 0.1
         self.smoothing_position = 0.05
 
+        self.drive_straight = 0
+
+
     def path_callback(self, msg: PoseArray):
         self.path.clear()
         for pose in msg.poses:
@@ -46,12 +49,22 @@ class DriveToPath(Node):
             _, _, yaw = euler_from_quaternion([pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w])
             pose2d.theta = yaw
             self.path.append(pose2d)
+        self.get_logger().info(f"Received path with {len(self.path)} waypoints.")
         self.current_goal_idx = 0
 
     def control_loop(self):
         if not self.path or self.current_goal_idx >= len(self.path):
             return
 
+        if self.drive_straight > 0:
+            self.drive_straight -= 1
+            twist = Twist()
+            twist.linear.x = 0.5
+            twist.angular.z = 0.0
+            self.cmd_vel_pub.publish(twist)
+            return
+            
+        self.get_logger().info(f"Tracking waypoint {self.current_goal_idx+1}/{len(self.path)}")
         goal = self.path[self.current_goal_idx]
 
         dx = goal.x - self.current_x
@@ -99,8 +112,12 @@ class DriveToPath(Node):
             final_angle_error = self.normalize_angle(goal.theta - self.current_yaw)
             if abs(final_angle_error) > self.angle_tolerance:
                 twist.angular.z = self.angular_gain * final_angle_error
+                self.get_logger().info(f"Angle error: {final_angle_error}")
+                if abs(twist.angular.z) < 0.5:
+                    twist.angular.z = 0.5 * (1 if twist.angular.z > 0 else -1)
                 twist.linear.x = 0.0
 
+                self.get_logger().info(f"twist: {twist.linear.x}, {twist.angular.z}")
                 twist.angular.z = 0.3 * twist.angular.z + 0.7 * self.prev_angular_z
 
                 self.prev_linear_x = twist.linear.x
@@ -109,6 +126,7 @@ class DriveToPath(Node):
             else:
                 self.get_logger().info("Goal reached.")
                 self.current_goal_idx += 1
+                self.drive_straight = 100
                 if self.current_goal_idx >= len(self.path):
                     self.get_logger().info("Path complete.")
                     self.cmd_vel_pub.publish(0.0)

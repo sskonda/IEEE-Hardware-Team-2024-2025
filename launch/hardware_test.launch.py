@@ -15,37 +15,6 @@ def generate_launch_description():
         'format': 'RGB888',
     }
 
-    odom_kf_parameters = {
-        'frequency': 50.0,
-        'sensor_timeout': 0.02,
-        'two_d_mode': True,
-        'map_frame': 'map',
-        'odom_frame': 'odom',
-        'base_link_frame': 'base_link',
-        'world_frame': 'odom',
-        'imu0': '/sensors/imu',
-        'imu0_config': [
-            False, False, False,
-            False, False, False,
-            False, False, False,
-            True, True, True,
-            True, True, True,
-        ],
-        'imu0_remove_gravitational_acceleration': True,
-        'odom0': '/drive/odometry',
-        'odom0_config': [
-            True, True, False,    # Linear Position
-            False, False, False,    # Angular Position
-            False, False, False,    # Linear Vel
-            False, False, False,  # Angular Vel
-            False, False, False,  # Linear Accel
-        ],
-        'initial_state': [0.0] * 15,
-    }
-
-    def to_args(d):
-        return [str(val) for pair in (('--'+k, v) for k, v in d.items()) for val in pair]
-
     robot_description = xacro.process_file(
         'robot.xacro').toprettyxml(indent='  ')  # type: ignore
 
@@ -115,54 +84,8 @@ def generate_launch_description():
         ),
         Node(
             package='robot_control',
-            executable='drive_to_path',
-            name='drive_controller',
-            parameters=[
-                {'position_tolerance': 0.0254},
-                {'angle_tolerance': 0.25},
-                {'linear_gain': 0.5},
-                {'angular_gain': 1.5},
-            ],
-            remappings=[
-                # ('/odometry/filtered', '/filtered_odom')
-                ('/goal_pose', '/drive/goal_pose'),
-                ('/goal_done', '/drive/goal_done'),
-                ('/filtered_odom', '/odometry/filtered'),
-                ('/enable', '/drive/enable')
-            ]
-        ),
-
-        Node(
-            package='robot_control',
             executable='sensor_fusion',
             name='sensor_fusion',
-        ),
-        # EKF nodes for odometry and map
-        # Node(
-        #     package='robot_localization',
-        #     executable='ekf_node',
-        #     name='odometry_ekf',
-        #     parameters=[odom_kf_parameters],
-        #     arguments=['--log-level', 'debug']
-        # ),
-        # Node(
-        #     package='robot_localization',
-        #     executable='ekf_node',
-        #     name='map_ekf',
-        #     parameters=[map_kf_parameters]
-        # ),
-        Node(
-            package='py_robot',
-            executable='object_detection',
-            name='object_detection',
-        ),
-        Node(
-            package='py_robot',
-            executable='path_planner',
-            remappings=[
-                ('/points_to_visit', '/purple_dots')
-            ],
-            name='path_planner'
         ),
         Node(
             package='web_video_server',

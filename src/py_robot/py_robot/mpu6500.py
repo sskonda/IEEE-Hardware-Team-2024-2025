@@ -30,7 +30,7 @@ class MPU6500(Node):
         self.__axis_i = [x_i, y_i, z_i]
         self.__axis_flip = (np.array(list(axis_order))[self.__axis_i] == np.array(list('xyz'))) * 2 - 1
 
-        calibration_filepath = pathlib.Path("~/.ros/gyro_info/imu_calibration.npz")
+        calibration_filepath = pathlib.Path("~/.ros/gyro_info/imu_calibration.npz").expanduser()
         if calibration_filepath.exists():
             calibration = np.load(str(calibration_filepath.resolve()))
         else:

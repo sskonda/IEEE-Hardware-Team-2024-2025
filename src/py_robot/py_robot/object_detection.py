@@ -22,7 +22,7 @@ class ObjectDetection(Node):
         self.map_frame = "odom"
 
         # transform buffer and listener
-        self.tf_buffer = Buffer()
+        self.tf_buffer = Buffer(cache_time=Duration(seconds=5))
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # camera info subscriber
@@ -79,37 +79,41 @@ class ObjectDetection(Node):
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         poses = []
 
-        for contour in sorted(contours, key=cv2.contourArea, reverse=True):
-            area = cv2.contourArea(contour)
-            if area < 50:
-                self.get_logger().warn(f"Contour area too small: {area}")
-                return
+        try:
+            for contour in sorted(contours, key=cv2.contourArea, reverse=True):
+                area = cv2.contourArea(contour)
+                if area < 50:
+                    self.get_logger().warn(f"Contour area too small: {area}")
+                    return
 
-            (x, y), r = cv2.minEnclosingCircle(contour)
+                (x, y), r = cv2.minEnclosingCircle(contour)
 
-            if self.debug:
-                debug_frame[2*height:3*height] = cv2.circle(debug_frame[2*height:3*height], (int(x), int(y)), int(r), (0, 255, 0), 2)
+                if self.debug:
+                    debug_frame[2*height:3*height] = cv2.circle(debug_frame[2*height:3*height], (int(x), int(y)), int(r), (0, 255, 0), 2)
 
-            distance = self.calculate_distance(r)
-            point_cam = self.image_to_camera_3d(x, y, distance)
+                distance = self.calculate_distance(r)
+                point_cam = self.image_to_camera_3d(x, y, distance)
 
-            point_msg = PointStamped()
-            point_msg.header.frame_id = self.camera_frame
-            point_msg.header.stamp = msg.header.stamp
-            point_msg.point.x, point_msg.point.y, point_msg.point.z = point_cam.tolist()
-            
-            point_world = self.tf_buffer.transform(point_msg, self.map_frame, timeout=Duration(seconds=5))
+                point_msg = PointStamped()
+                point_msg.header.frame_id = self.camera_frame
+                point_msg.header.stamp = msg.header.stamp
+                point_msg.point.x, point_msg.point.y, point_msg.point.z = point_cam.tolist()
+                
+                point_world = self.tf_buffer.transform(point_msg, self.map_frame, timeout=Duration(seconds=5))
 
-            pose = Pose()
-            pose.position = point_world.point
-            poses.append(pose)        # purple nodes arer added to pose array 
+                pose = Pose()
+                pose.position = point_world.point
+                poses.append(pose)        # purple nodes arer added to pose array 
 
-        pose = PoseStamped()
-        pose.header = msg.header
-        pose.header.frame_id = "base_link"
-        pose_world = self.tf_buffer.transform(pose, self.map_frame, timeout=Duration(seconds=5))
+            pose = PoseStamped()
+            pose.header = msg.header
+            pose.header.frame_id = "base_link"
+            pose_world = self.tf_buffer.transform(pose, self.map_frame, timeout=Duration(seconds=5))
 
-        poses.insert(0, pose_world.pose)
+            poses.insert(0, pose_world.pose)
+        except:
+            self.get_logger().warn("Transform not available yet.")
+            return
 
         pose_array_msg = PoseArray()
         pose_array_msg.header = msg.header

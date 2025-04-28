@@ -1,4 +1,5 @@
 import numpy as np
+from pathlib import Path
 
 # ---------- Fit ellipsoid ----------
 def fit_ellipsoid(data):
@@ -29,13 +30,12 @@ gyro_data = data[:, 3:6]
 
 # ---------- Global ellipsoid fit (accelerometer and gyro) ----------
 accel_fit = fit_ellipsoid(accel_data)
-gyro_fit = fit_ellipsoid(gyro_data)
 
 accel_center = np.array(accel_fit['center'])
 accel_axes = np.array(accel_fit['axes'])
 
-gyro_center = np.array(gyro_fit['center'])
-gyro_axes = np.array(gyro_fit['axes'])
+gyro_center = np.mean(gyro_data, axis=0)
+# gyro_axes = np.std(gyro_data, axis=0)
 
 print("Global Accelerometer Ellipsoid Fit:")
 print("  Center:", accel_center)
@@ -43,7 +43,7 @@ print("  Axes:", accel_axes)
 
 print("\nGlobal Gyroscope Ellipsoid Fit:")
 print("  Center:", gyro_center)
-print("  Axes:", gyro_axes)
+# print("  Axes:", gyro_axes)
 
 # ---------- Pose-wise covariance using global fit ----------
 num_poses = 15
@@ -59,7 +59,7 @@ for i in range(num_poses):
 
     # Normalize using global ellipsoid fit
     accel_norm = normalize_ellipsoid(accel_block, accel_center, accel_axes)
-    gyro_norm = normalize_ellipsoid(gyro_block, gyro_center, gyro_axes)
+    gyro_norm = gyro_block - gyro_center
 
     # Fix magnitude scaling (rescale to unit sphere)
     accel_mag = np.linalg.norm(accel_norm, axis=1)
@@ -84,3 +84,15 @@ for i in range(num_poses):
     print("Accelerometer Mean Magnitude (m/s²):", accel_mean_mag_mps2)
     print("Gyroscope Covariance:\n", gyro_cov)
     print("Gyroscope Mean Magnitude:", gyro_mean_mag)
+
+# Save calibration data
+path = Path('~/.ros/gyro_info/').expanduser()
+path.mkdir(parents=True, exist_ok=True)
+np.savez(
+    str(path.joinpath('imu_calibration.npz').resolve()),
+    angular_offset=gyro_center * (np.pi / 180.0) / 131.0,
+    linear_offset=accel_center,
+    # angular_scale=np.ones(3, dtype=np.float64),
+    # linear_scale=accel_axes,
+    angular_covariance=np.cov(gyro_data * (np.pi / 180.0) / 131.0, rowvar=False).flatten(),
+)

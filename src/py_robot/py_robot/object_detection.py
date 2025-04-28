@@ -16,6 +16,9 @@ class ObjectDetection(Node):
     def __init__(self, debug=False):
         super().__init__("object_detection")
 
+        self.lower_bound = np.array(self.declare_parameter('lower_bound', [120, 110, 60]).get_parameter_value().integer_array_value, dtype=np.uint8)
+        self.upper_bound = np.array(self.declare_parameter('upper_bound', [130, 255, 255]).get_parameter_value().integer_array_value, dtype=np.uint8)
+
         self.fx = self.fy = self.cx = self.cy = None
         self.camera_info_received = False
         self.camera_frame = None
@@ -64,15 +67,15 @@ class ObjectDetection(Node):
         if self.debug:
             debug_frame = np.zeros((height*3, width, depth), dtype=frame.dtype)
             debug_frame[0*height:1*height] = frame
+        else:
+            debug_frame = None
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        lower_purple = np.array([113, 195, 100])
-        upper_purple = np.array([127, 255, 255])
-        mask = cv2.inRange(hsv, lower_purple, upper_purple)
+        mask = cv2.inRange(hsv, self.lower_bound, self.upper_bound)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8), iterations=4)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
 
-        if self.debug:
+        if self.debug and debug_frame is not None:
             debug_frame[1*height:2*height][mask[:, :] == 255] = frame[mask[:, :] == 255]
             debug_frame[2*height:3*height] = frame
 
@@ -88,7 +91,7 @@ class ObjectDetection(Node):
 
                 (x, y), r = cv2.minEnclosingCircle(contour)
 
-                if self.debug:
+                if self.debug and debug_frame is not None:
                     debug_frame[2*height:3*height] = cv2.circle(debug_frame[2*height:3*height], (int(x), int(y)), int(r), (0, 255, 0), 2)
 
                 distance = self.calculate_distance(r)
@@ -114,14 +117,15 @@ class ObjectDetection(Node):
         except:
             self.get_logger().warn("Transform not available yet.")
             return
+        finally:
+            if self.debug and debug_frame is not None:
+                self.debug_pub.publish(self.bridge.cv2_to_imgmsg(debug_frame[::-1, ::-1], encoding="bgr8"))
 
         pose_array_msg = PoseArray()
         pose_array_msg.header = msg.header
         pose_array_msg.header.frame_id = self.map_frame
         pose_array_msg.poses = poses
 
-        if self.debug:
-            self.debug_pub.publish(self.bridge.cv2_to_imgmsg(debug_frame[::-1, ::-1], encoding="bgr8"))
         self.purple_dots_pub.publish(pose_array_msg)
 
         # self.get_logger().info(f"Published {len(poses)} purple dot(s).")

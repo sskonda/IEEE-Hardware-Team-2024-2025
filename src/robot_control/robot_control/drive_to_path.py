@@ -111,6 +111,7 @@ class DriveToPath(Node):
                 self.current_goal_idx += 1
                 if self.current_goal_idx >= len(self.path):
                     self.get_logger().info("Path complete.")
+                    self.cmd_vel_pub.publish(0.0)
                     self.goal_done_pub.publish(Bool(data=True))
                 twist.linear.x = 0.0
                 twist.angular.z = 0.0

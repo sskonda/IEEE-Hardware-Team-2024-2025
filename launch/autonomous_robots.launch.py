@@ -164,9 +164,9 @@ def generate_launch_description():
             ],
             name='path_planner'
         ),
-        Node(
-            package='web_video_server',
-            executable='web_video_server',
-            name='web_video_server',
-        )
+        # Node(
+        #     package='web_video_server',
+        #     executable='web_video_server',
+        #     name='web_video_server',
+        # )
     ])

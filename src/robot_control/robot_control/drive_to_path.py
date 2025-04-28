@@ -29,7 +29,7 @@ class DriveToPath(Node):
         self.current_y = None
         self.current_yaw = None
 
-        self.path = []
+        self.path = None
         self.current_goal_idx = 0
 
         self.prev_linear_x = 0.0
@@ -41,29 +41,34 @@ class DriveToPath(Node):
 
 
     def path_callback(self, msg: PoseArray):
-        self.path.clear()
-        for pose in msg.poses:
-            pose2d = Pose2D()
-            pose2d.x = pose.position.x
-            pose2d.y = pose.position.y
-            _, _, yaw = euler_from_quaternion([pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w])
-            pose2d.theta = yaw
-            self.path.append(pose2d)
-        self.get_logger().info(f"Received path with {len(self.path)} waypoints.")
-        self.current_goal_idx = 0
+        if self.path == None:
+            self.path = []
+            for pose in msg.poses:
+                pose2d = Pose2D()
+                pose2d.x = pose.position.x
+                pose2d.y = pose.position.y
+                _, _, yaw = euler_from_quaternion([pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w])
+                pose2d.theta = yaw
+                self.path.append(pose2d)
+            self.get_logger().info(f"Received path with {len(self.path)} waypoints.")
+            self.current_goal_idx = 0
 
     def control_loop(self):
-        if not self.path or self.current_goal_idx >= len(self.path):
-            return
-
         if self.drive_straight > 0:
             self.drive_straight -= 1
             twist = Twist()
-            twist.linear.x = 0.5
+            twist.linear.x = 0.1
             twist.angular.z = 0.0
             self.cmd_vel_pub.publish(twist)
             return
-            
+
+        if self.path is None:
+            twist = Twist()
+            twist.linear.x = 0.0
+            twist.angular.z = 0.2
+            self.cmd_vel_pub.publish(twist)
+            return
+
         self.get_logger().info(f"Tracking waypoint {self.current_goal_idx+1}/{len(self.path)}")
         goal = self.path[self.current_goal_idx]
 
@@ -129,7 +134,7 @@ class DriveToPath(Node):
                 self.drive_straight = 100
                 if self.current_goal_idx >= len(self.path):
                     self.get_logger().info("Path complete.")
-                    self.cmd_vel_pub.publish(0.0)
+                    self.path = None
                     self.goal_done_pub.publish(Bool(data=True))
                 twist.linear.x = 0.0
                 twist.angular.z = 0.0

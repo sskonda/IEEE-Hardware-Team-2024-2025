@@ -1,5 +1,7 @@
 from psutil import sensors_temperatures
 import rclpy
+import tf2_ros
+from geometry_msgs.msg import TransformStamped
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.node import Node
 from sensor_msgs.msg import Imu
@@ -19,6 +21,7 @@ class SensorFusion(Node):
         # self.angular_gain = self.declare_parameter("max_angular_speed", 0.5).get_parameter_value().double_value
 
         self.odom_pub = self.create_publisher(Odometry, '/odometry/filtered', qos_profile=qos_profile_sensor_data)
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
         
         self.heading = 0.0
         self.x = 0.0
@@ -38,7 +41,7 @@ class SensorFusion(Node):
             self._last_imu = msg
             return
         
-        dt = self._last_imu.header.stamp.sec - msg.header.stamp.sec + (self._last_imu.header.stamp.nanosec - msg.header.stamp.nanosec) / 1_000_000_000
+        dt = msg.header.stamp.sec - self._last_imu.header.stamp.sec + (msg.header.stamp.nanosec - self._last_imu.header.stamp.nanosec) / 1_000_000_000
         self.heading += msg.angular_velocity.x * dt
         self.angular_velocity = msg.angular_velocity.x
 
@@ -59,10 +62,7 @@ class SensorFusion(Node):
 
         self.odom_pub.publish(
             Odometry(
-                header=Header(
-                    stamp=header.stamp,
-                    frame_id="odom"
-                ),
+                header=header,
                 child_frame_id="base_link",
                 pose=PoseWithCovariance(
                     pose=Pose(
@@ -74,8 +74,8 @@ class SensorFusion(Node):
                         orientation=Quaternion(
                             x=0.0,
                             y=0.0,
-                            z=math.sin(self.heading),
-                            w=math.cos(self.heading),
+                            z=math.sin(self.heading/2),
+                            w=math.cos(self.heading/2),
                         )
                     )
                 ),
@@ -93,16 +93,30 @@ class SensorFusion(Node):
                         )
                     ),
                     covariance=[
-                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                        0.0, 0.0, 0.0, 0.5, 0.0, 0.0,
-                        0.0, 0.0, 0.0, 0.0, 0.5, 0.0,
-                        0.0, 0.0, 0.0, 0.0, 0.0, 0.5,
+                        0.001, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.001, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0, 0.001, 0.0, 0.0, 0.0,
+                        0.0, 0.0, 0.0, 0.005, 0.0, 0.0,
+                        0.0, 0.0, 0.0, 0.0, 0.005, 0.0,
+                        0.0, 0.0, 0.0, 0.0, 0.0, 0.005,
                     ]
                 )
             )
         )
+        
+        # Now broadcast the TF
+        t = TransformStamped()
+        t.header = header
+        t.child_frame_id = "base_link"
+        t.transform.translation.x = self.x
+        t.transform.translation.y = self.y
+        t.transform.translation.z = 0.0
+        t.transform.rotation.x = 0.0
+        t.transform.rotation.y = 0.0
+        t.transform.rotation.z = math.sin(self.heading/2)
+        t.transform.rotation.w = math.cos(self.heading/2)
+
+        self.tf_broadcaster.sendTransform(t)
 
 
 def main(args=None):

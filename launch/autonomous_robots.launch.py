@@ -94,6 +94,9 @@ def generate_launch_description():
             package='py_robot',
             executable='mpu6500',
             name='imu',
+            parameters=[
+                {'axis_order': 'xyz'}
+            ]
         ),
         # AprilTag detection container
         camera_container,
@@ -127,14 +130,19 @@ def generate_launch_description():
             ]
         ),
 
-        # EKF nodes for odometry and map
         Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='odometry_ekf',
-            parameters=[odom_kf_parameters],
-            arguments=['--log-level', 'debug']
+            package='robot_control',
+            executable='sensor_fusion',
+            name='sensor_fusion',
         ),
+        # EKF nodes for odometry and map
+        # Node(
+        #     package='robot_localization',
+        #     executable='ekf_node',
+        #     name='odometry_ekf',
+        #     parameters=[odom_kf_parameters],
+        #     arguments=['--log-level', 'debug']
+        # ),
         # Node(
         #     package='robot_localization',
         #     executable='ekf_node',

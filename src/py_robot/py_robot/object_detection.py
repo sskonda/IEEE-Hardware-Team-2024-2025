@@ -18,8 +18,8 @@ class ObjectDetection(Node):
 
         self.fx = self.fy = self.cx = self.cy = None
         self.camera_info_received = False
-        self.camera_frame = "camera_frame"
-        self.map_frame = "base_link"
+        self.camera_frame = None
+        self.map_frame = "odom"
 
         # transform buffer and listener
         self.tf_buffer = Buffer()
@@ -98,7 +98,7 @@ class ObjectDetection(Node):
             point_msg.header.stamp = msg.header.stamp
             point_msg.point.x, point_msg.point.y, point_msg.point.z = point_cam.tolist()
             
-            point_world = self.tf_buffer.transform(point_msg, self.map_frame, timeout=Duration(seconds=2.5))
+            point_world = self.tf_buffer.transform(point_msg, self.map_frame, timeout=Duration(seconds=5))
 
             pose = Pose()
             pose.position = point_world.point
@@ -107,7 +107,7 @@ class ObjectDetection(Node):
         pose = PoseStamped()
         pose.header = msg.header
         pose.header.frame_id = "base_link"
-        pose_world = self.tf_buffer.transform(pose, self.map_frame, timeout=Duration(seconds=2.5))
+        pose_world = self.tf_buffer.transform(pose, self.map_frame, timeout=Duration(seconds=5))
 
         poses.insert(0, pose_world.pose)
 

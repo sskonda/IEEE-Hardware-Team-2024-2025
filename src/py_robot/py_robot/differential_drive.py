@@ -85,7 +85,7 @@ class DifferentialDrive(Node):
         RIGHT_PID_MOTOR.init(self.pi)
         
     def _filtered_odom_callback(self, msg: Odometry):
-        self.current_heading = np.arctan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)
+        self.current_heading = 2 * np.arctan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w)
         
     def _enable_callback(self, msg: Bool):
         self.enabled = msg.data
@@ -132,8 +132,8 @@ class DifferentialDrive(Node):
                     orientation=Quaternion(
                         x=0.0,
                         y=0.0,
-                        z=np.sin(self.current_heading.item()),
-                        w=np.cos(self.current_heading.item()),
+                        z=np.sin(self.current_heading.item() / 2),
+                        w=np.cos(self.current_heading.item() / 2),
                     )
                 )
             ),

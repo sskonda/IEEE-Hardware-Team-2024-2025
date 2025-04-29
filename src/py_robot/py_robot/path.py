@@ -13,7 +13,7 @@ class NearestNeighborPlanner(Node):
             self.listener_callback,
             10
         ) 
-        self.publisher = self.create_publisher(PoseArray, 'ordered_path', qos_profile=rclpy.qos.qos_profile_sensor_data) #creates a topic to publish to
+        self.publisher = self.create_publisher(PoseArray, 'ordered_path', qos_profile=10) #creates a topic to publish to
 
     def listener_callback(self, msg): #called when receives points
         if len(msg.poses) < 2: #cannnot perform path planning with less than 2 points

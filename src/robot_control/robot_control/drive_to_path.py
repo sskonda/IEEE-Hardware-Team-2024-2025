@@ -22,7 +22,7 @@ class DriveToPath(Node):
 
         self.timer = self.create_timer(0.005, self.control_loop)
 
-        self.path_sub = self.create_subscription(PoseArray, '/ordered_path', self.path_callback, qos_profile_sensor_data)
+        self.path_sub = self.create_subscription(PoseArray, '/ordered_path', self.path_callback, 10)
         self.filtered_odom = self.create_subscription(Odometry, '/filtered_odom', self.filtered_odom_callback, qos_profile_sensor_data)
 
         self.current_x = None
@@ -52,6 +52,8 @@ class DriveToPath(Node):
                 self.path.append(pose2d)
             self.get_logger().info(f"Received path with {len(self.path)} waypoints.")
             self.current_goal_idx = 0
+        else:
+            self.get_logger().info("Path already received, ignoring new path.")
 
     def control_loop(self):
         if self.drive_straight > 0:
@@ -65,8 +67,9 @@ class DriveToPath(Node):
         if self.path is None:
             twist = Twist()
             twist.linear.x = 0.0
-            twist.angular.z = 0.2
+            twist.angular.z = 0.3
             self.cmd_vel_pub.publish(twist)
+            # self.get_logger().info("Searching...")
             return
 
         goal = self.path[self.current_goal_idx]

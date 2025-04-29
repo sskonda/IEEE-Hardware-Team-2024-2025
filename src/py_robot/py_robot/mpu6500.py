@@ -43,7 +43,7 @@ class MPU6500(Node):
         self.linear_scale = calibration['linear_scale'] if 'linear_scale' in calibration else np.ones(3, dtype=np.float64)
         self.angular_covariance = calibration['angular_covariance'] if 'angular_covariance' in calibration else np.zeros(9, dtype=np.float64)
         self.linear_covariance = calibration['linear_covariance'] if 'linear_covariance' in calibration else np.zeros(9, dtype=np.float64)
-        
+
         # Adjust scale for units
         self.angular_scale *= (np.pi / 180.0) / 131.0  # rad/s
         self.linear_scale *= 9.80665 / 16384.0  # m/s^2

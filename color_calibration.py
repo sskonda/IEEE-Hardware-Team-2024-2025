@@ -1,9 +1,12 @@
 import rclpy
 from rclpy.node import Node
+import rclpy.parameter_client
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-
+import sys
 import cv2
+import os
+import json
 import numpy as np
 
 SCALE = 2
@@ -18,9 +21,18 @@ class ThresholdCalibrator(Node):
         self.current_frame = None
         self.hsv_frame = None
 
-        # Initialize thresholds to extreme values
-        self.lower = np.array([255, 255, 255])
-        self.upper = np.array([0, 0, 0])
+        if os.path.exists('launch/color_thresholds.json'):
+            with open('launch/color_thresholds.json', 'r') as f:
+                data = json.load(f)
+                self.lower_bound = np.array(data['lower_bound'], dtype=np.uint8)
+                self.upper_bound = np.array(data['upper_bound'], dtype=np.uint8)
+                self.get_logger().info(f"Loaded thresholds: lower_bound={self.lower_bound.tolist()}, upper={self.upper_bound.tolist()}")
+        else:
+            # Initialize thresholds to extreme values
+            self.lower_bound = np.array([255, 255, 255], dtype=np.uint8)
+            self.upper_bound = np.array([0, 0, 0], dtype=np.uint8)
+
+        self.target_node = sys.argv[-1] if len(sys.argv) > 1 else '/object_detection'
 
         self.timer = self.create_timer(0.01, self.timer_callback)
         
@@ -46,8 +58,8 @@ class ThresholdCalibrator(Node):
 
         if event == cv2.EVENT_LBUTTONDOWN or (event == cv2.EVENT_MOUSEMOVE and flags & cv2.EVENT_FLAG_LBUTTON):
             self.get_logger().info(f"Left click: Incorporate {pixel}")
-            self.lower = np.minimum(self.lower, pixel)
-            self.upper = np.maximum(self.upper, pixel)
+            self.lower_bound = np.minimum(self.lower_bound, pixel)
+            self.upper_bound = np.maximum(self.upper_bound, pixel)
 
         elif event == cv2.EVENT_MBUTTONDOWN:
             pixel = self.hsv_frame[y, x]
@@ -58,9 +70,9 @@ class ThresholdCalibrator(Node):
             best_direction = None
 
             for i in range(3):  # H, S, V channels
-                if self.lower[i] <= pixel[i] <= self.upper[i]:
-                    dist_to_lower = abs(pixel[i] - self.lower[i])
-                    dist_to_upper = abs(self.upper[i] - pixel[i])
+                if self.lower_bound[i] <= pixel[i] <= self.upper_bound[i]:
+                    dist_to_lower = abs(pixel[i] - self.lower_bound[i])
+                    dist_to_upper = abs(self.upper_bound[i] - pixel[i])
 
                     if best_adjustment is None or min(dist_to_lower, dist_to_upper) < best_adjustment:
                         best_adjustment = min(dist_to_lower, dist_to_upper)
@@ -69,18 +81,18 @@ class ThresholdCalibrator(Node):
 
             if best_channel is not None:
                 if best_direction == 'lower':
-                    self.lower[best_channel] = min(pixel[best_channel] + 1, 255)
-                    self.get_logger().info(f"Adjusted lower[{best_channel}] to {self.lower[best_channel]}")
+                    self.lower_bound[best_channel] = min(pixel[best_channel] + 1, 255)
+                    self.get_logger().info(f"Adjusted lower[{best_channel}] to {self.lower_bound[best_channel]}")
                 else:
-                    self.upper[best_channel] = max(pixel[best_channel] - 1, 0)
-                    self.get_logger().info(f"Adjusted upper[{best_channel}] to {self.upper[best_channel]}")
+                    self.upper_bound[best_channel] = max(pixel[best_channel] - 1, 0)
+                    self.get_logger().info(f"Adjusted upper[{best_channel}] to {self.upper_bound[best_channel]}")
             else:
                 self.get_logger().info("Pixel already excluded; no adjustment needed.")
         
         elif event == cv2.EVENT_RBUTTONDOWN:
             self.get_logger().info("Right click: Reset thresholds")
-            self.lower = np.array([255, 255, 255])
-            self.upper = np.array([0, 0, 0])
+            self.lower_bound = np.array([255, 255, 255])
+            self.upper_bound = np.array([0, 0, 0])
 
     def image_callback(self, msg):
         # Convert ROS Image message to OpenCV image
@@ -91,8 +103,8 @@ class ThresholdCalibrator(Node):
         if self.hsv_frame is None:
             return
 
-        if np.any(self.lower != self.upper):
-            mask = cv2.inRange(self.hsv_frame, self.lower, self.upper)
+        if np.any(self.lower_bound != self.upper_bound):
+            mask = cv2.inRange(self.hsv_frame, self.lower_bound, self.upper_bound)
             preview = cv2.bitwise_and(self.current_frame, self.current_frame, mask=cv2.bitwise_not(mask))
         else:
             mask = np.zeros((self.current_frame.shape[0], self.current_frame.shape[1]), dtype=np.uint8)
@@ -107,7 +119,24 @@ class ThresholdCalibrator(Node):
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
-            self.get_logger().info(f"Final thresholds: lower={self.lower.tolist()}, upper={self.upper.tolist()}")
+            thresholds = {'lower_bound': self.lower_bound.tolist(), 'upper_bound': self.upper_bound.tolist()}
+            with open('launch/color_thresholds.json', 'w') as f:
+                json.dump(thresholds, f)
+            if self.target_node is not None:
+                parameter_client = self.create_client(rclpy.parameter_client.AsyncParameterClient, self.target_node)
+                while not parameter_client.wait_for_service(timeout_sec=1.0):
+                    self.get_logger().info(f"Waiting for {self.target_node} to be available...")
+                lower_param = rclpy.parameter_client.Parameter('lower_bound', value=self.lower_bound.tolist())
+                upper_param = rclpy.parameter_client.Parameter('upper_bound', value=self.upper_bound.tolist())
+                future = parameter_client.set_parameters([lower_param, upper_param])
+                rclpy.spin_until_future_complete(self, future)
+                
+                if future.result() is not None:
+                    self.get_logger().info(f"Parameters set on {self.target_node}: lower_bound={self.lower_bound.tolist()}, upper_bound={self.upper_bound.tolist()}")
+                else:
+                    self.get_logger().error(f"Failed to set parameters on {self.target_node}: {future.exception()}")
+                
+            self.get_logger().info(f"Final thresholds: lower_bound={self.lower_bound.tolist()}, upper_bound={self.upper_bound.tolist()}")
             rclpy.shutdown()
 
 def main(args=None):

@@ -3,9 +3,17 @@ import xacro
 from launch import LaunchDescription
 from launch_ros.actions import Node, ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
+import json
+import os
 
 
 def generate_launch_description():
+    if os.path.exists('color_thresholds.json'):
+        with open('color_thresholds.json', 'r') as f:
+            color_thresholds = json.load(f)
+    else:
+        color_thresholds = None
+        
     # Camera & AprilTag settings
     camera_parameters = {
         'camera': 0,
@@ -155,6 +163,7 @@ def generate_launch_description():
             package='py_robot',
             executable='object_detection',
             name='object_detection',
+            parameters=[color_thresholds] if color_thresholds is not None else [],
         ),
         Node(
             package='py_robot',

@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
+import rclpy.parameter
 from sensor_msgs.msg import CameraInfo, Image
 from geometry_msgs.msg import PointStamped, PoseStamped, PoseArray, Pose
 from tf2_ros import Buffer, TransformListener
@@ -18,6 +19,8 @@ class ObjectDetection(Node):
 
         self.lower_bound = np.array(self.declare_parameter('lower_bound', [120, 110, 60]).get_parameter_value().integer_array_value, dtype=np.uint8)
         self.upper_bound = np.array(self.declare_parameter('upper_bound', [130, 255, 255]).get_parameter_value().integer_array_value, dtype=np.uint8)
+        self.add_on_set_parameters_callback(self.parameter_callback)
+
 
         self.fx = self.fy = self.cx = self.cy = None
         self.camera_info_received = False
@@ -38,6 +41,16 @@ class ObjectDetection(Node):
         self.purple_dots_pub = self.create_publisher(PoseArray, "/purple_dots", 10)
 
         self.bridge = CvBridge()
+    
+    def parameter_callback(self, params):
+        for param in params:
+            if param.name == 'lower_bound':
+                self.lower_bound = np.array(param.value, dtype=np.uint8)
+                self.get_logger().info(f"Updated lower_bound to {self.lower_bound.tolist()}")
+            elif param.name == 'upper_bound':
+                self.upper_bound = np.array(param.value, dtype=np.uint8)
+                self.get_logger().info(f"Updated upper_bound to {self.upper_bound.tolist()}")
+        return rclpy.parameter.ParameterEventHandler().set_parameters_result(successful=True)
 
     # intrinsics 
     def camera_info_callback(self, msg: CameraInfo):

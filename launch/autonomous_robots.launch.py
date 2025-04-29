@@ -1,70 +1,16 @@
-import math
-import xacro
 from launch import LaunchDescription
 from launch_ros.actions import Node, ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
-import json
-import os
 
+from py_robot.common import *
 
 def generate_launch_description():
-    if os.path.exists('color_thresholds.json'):
-        with open('color_thresholds.json', 'r') as f:
-            color_thresholds = json.load(f)
-    else:
-        color_thresholds = None
-        
-    # Camera & AprilTag settings
-    camera_parameters = {
-        'camera': 0,
-        'width': 1640,
-        'height': 1232,
-        'sensor_mode': '1640:1232',
-        'format': 'RGB888',
-    }
-
-    odom_kf_parameters = {
-        'frequency': 50.0,
-        'sensor_timeout': 0.02,
-        'two_d_mode': True,
-        'map_frame': 'map',
-        'odom_frame': 'odom',
-        'base_link_frame': 'base_link',
-        'world_frame': 'odom',
-        'imu0': '/sensors/imu',
-        'imu0_config': [
-            False, False, False,
-            False, False, False,
-            False, False, False,
-            True, True, True,
-            True, True, True,
-        ],
-        'imu0_remove_gravitational_acceleration': True,
-        'odom0': '/drive/odometry',
-        'odom0_config': [
-            True, True, False,    # Linear Position
-            False, False, False,    # Angular Position
-            False, False, False,    # Linear Vel
-            False, False, False,  # Angular Vel
-            False, False, False,  # Linear Accel
-        ],
-        'initial_state': [0.0] * 15,
-    }
-
-    def to_args(d):
-        return [str(val) for pair in (('--'+k, v) for k, v in d.items()) for val in pair]
-
-    robot_description = xacro.process_file(
-        'robot.xacro').toprettyxml(indent='  ')  # type: ignore
-
     camera_container = ComposableNodeContainer(
         name='purple_container',
         namespace='camera',  # <--- Put everything in 'camera' namespace
         package='rclcpp_components',
         executable='component_container',
         composable_node_descriptions=[
-            
-            # 1) Camera driver node
             ComposableNode(
                 package='camera_ros',
                 plugin='camera::CameraNode',
@@ -72,8 +18,6 @@ def generate_launch_description():
                 parameters=[camera_parameters],
                 extra_arguments=[{'use_intra_process_comms': True}]
             ),
-
-            # 3) Rectify node
             ComposableNode(
                 package='image_proc',
                 plugin='image_proc::RectifyNode',
@@ -84,8 +28,16 @@ def generate_launch_description():
                     ('camera_info', 'camera_info'),
                     ('image_rect',  'image_rect'),  # output topic
                 ],
-                extra_arguments=[{'use_intra_process_comms': False}]
+                extra_arguments=[{'use_intra_process_comms': True}] 
             ),
+            # ComposableNode(
+            #     package='apriltag_ros',
+            #     plugin='AprilTagNode',
+            #     name='apriltag',
+            #     namespace='camera',
+            #     parameters=[apriltag_parameters],
+            #     extra_arguments=[{'use_intra_process_comms': True}],
+            # )
         ],
     )
 
@@ -145,25 +97,11 @@ def generate_launch_description():
             executable='sensor_fusion',
             name='sensor_fusion',
         ),
-        # EKF nodes for odometry and map
-        # Node(
-        #     package='robot_localization',
-        #     executable='ekf_node',
-        #     name='odometry_ekf',
-        #     parameters=[odom_kf_parameters],
-        #     arguments=['--log-level', 'debug']
-        # ),
-        # Node(
-        #     package='robot_localization',
-        #     executable='ekf_node',
-        #     name='map_ekf',
-        #     parameters=[map_kf_parameters]
-        # ),
         Node(
             package='py_robot',
             executable='object_detection',
             name='object_detection',
-            parameters=[color_thresholds] if color_thresholds is not None else [],
+            parameters=[color_thresholds],
         ),
         Node(
             package='py_robot',
@@ -173,9 +111,4 @@ def generate_launch_description():
             ],
             name='path_planner'
         ),
-        # Node(
-        #     package='web_video_server',
-        #     executable='web_video_server',
-        #     name='web_video_server',
-        # )
     ])

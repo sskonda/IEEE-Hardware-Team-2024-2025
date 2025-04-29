@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 import rclpy.parameter_client
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -101,7 +102,7 @@ class ThresholdCalibrator(Node):
         self.hsv_frame = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2HSV)
 
     def display_image(self):
-        if self.hsv_frame is None:
+        if self.current_frame is None or self.hsv_frame is None:
             return
 
         if np.any(self.lower_bound != self.upper_bound):
@@ -124,20 +125,11 @@ class ThresholdCalibrator(Node):
             with open('launch/color_thresholds.json', 'w') as f:
                 json.dump(thresholds, f)
             if self.target_node is not None:
-                while not self.parameter_client.wait_for_service(timeout_sec=1.0):
+                while not self.parameter_client.wait_for_services(timeout_sec=1.0):
                     self.get_logger().info(f"Waiting for {self.target_node} to be available...")
                 lower_param = Parameter('lower_bound', value=self.lower_bound.tolist())
                 upper_param = Parameter('upper_bound', value=self.upper_bound.tolist())
                 future = self.parameter_client.set_parameters([lower_param, upper_param])
-                rclpy.spin_until_future_complete(self, future)
-                
-                if future.result() is not None:
-                    self.get_logger().info(f"Parameters set on {self.target_node}: lower_bound={self.lower_bound.tolist()}, upper_bound={self.upper_bound.tolist()}")
-                else:
-                    self.get_logger().error(f"Failed to set parameters on {self.target_node}: {future.exception()}")
-                
-            self.get_logger().info(f"Final thresholds: lower_bound={self.lower_bound.tolist()}, upper_bound={self.upper_bound.tolist()}")
-            rclpy.shutdown()
 
 def main(args=None):
     rclpy.init(args=args)

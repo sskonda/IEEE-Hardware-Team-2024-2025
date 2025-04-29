@@ -21,6 +21,7 @@ class SensorFusion(Node):
         # self.angular_gain = self.declare_parameter("max_angular_speed", 0.5).get_parameter_value().double_value
 
         self.odom_pub = self.create_publisher(Odometry, '/odometry/filtered', qos_profile=qos_profile_sensor_data)
+        self.timer = self.create_timer(0.05, self.publish_odom)
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
         
         self.heading = 0.0
@@ -31,6 +32,7 @@ class SensorFusion(Node):
         self.vx = 0.0
         self.vy = 0.0
 
+        self.latest_header = None
         self.imu_sub = self.create_subscription(Imu, '/sensors/imu', self._imu, qos_profile=qos_profile_sensor_data) 
         self._last_imu = None   
         self.odom_sub = self.create_subscription(Odometry, '/drive/odometry', self._odom, qos_profile=qos_profile_sensor_data)
@@ -59,6 +61,7 @@ class SensorFusion(Node):
 
     def publish_odom(self, header):
         header.frame_id = 'odom'
+        self.latest_header = header
 
         self.odom_pub.publish(
             Odometry(
@@ -103,10 +106,14 @@ class SensorFusion(Node):
                 )
             )
         )
+    
+    def timer_callback(self, *args):
+        if self.latest_header is None:
+            return
         
         # Now broadcast the TF
         t = TransformStamped()
-        t.header = header
+        t.header = self.latest_header
         t.child_frame_id = "base_link"
         t.transform.translation.x = self.x
         t.transform.translation.y = self.y

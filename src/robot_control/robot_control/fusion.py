@@ -21,7 +21,7 @@ class SensorFusion(Node):
         # self.angular_gain = self.declare_parameter("max_angular_speed", 0.5).get_parameter_value().double_value
 
         self.odom_pub = self.create_publisher(Odometry, '/odometry/filtered', qos_profile=qos_profile_sensor_data)
-        self.timer = self.create_timer(0.05, self.publish_odom)
+        self.timer = self.create_timer(0.05, self.timer_callback)
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
         
         self.heading = 0.0

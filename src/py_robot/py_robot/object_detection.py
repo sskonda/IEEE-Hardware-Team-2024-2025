@@ -29,7 +29,7 @@ class ObjectDetection(Node):
         self.map_frame = "odom"
 
         # transform buffer and listener
-        self.tf_buffer = Buffer(cache_time=Duration(seconds=5))
+        self.tf_buffer = Buffer(cache_time=Duration(seconds=15))
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # camera info subscriber
@@ -129,8 +129,8 @@ class ObjectDetection(Node):
             pose_world = self.tf_buffer.transform(pose, self.map_frame, timeout=Duration(seconds=5))
 
             poses.insert(0, pose_world.pose)
-        except:
-            self.get_logger().warn("Transform not available yet.")
+        except Exception as e:
+            self.get_logger().warn("Transform not available yet.\n" + str(e))
             return
         finally:
             if self.debug and debug_frame is not None:

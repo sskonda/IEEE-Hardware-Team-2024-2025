@@ -33,6 +33,7 @@ class ThresholdCalibrator(Node):
             self.upper_bound = np.array([0, 0, 0], dtype=np.uint8)
 
         self.target_node = sys.argv[-1] if len(sys.argv) > 1 else '/object_detection'
+        self.parameter_client = rclpy.parameter_client.AsyncParameterClient(self, self.target_node)
 
         self.timer = self.create_timer(0.01, self.timer_callback)
         
@@ -123,12 +124,11 @@ class ThresholdCalibrator(Node):
             with open('launch/color_thresholds.json', 'w') as f:
                 json.dump(thresholds, f)
             if self.target_node is not None:
-                parameter_client = self.create_client(rclpy.parameter_client.AsyncParameterClient, self.target_node)
-                while not parameter_client.wait_for_service(timeout_sec=1.0):
+                while not self.parameter_client.wait_for_service(timeout_sec=1.0):
                     self.get_logger().info(f"Waiting for {self.target_node} to be available...")
-                lower_param = rclpy.parameter_client.Parameter('lower_bound', value=self.lower_bound.tolist())
-                upper_param = rclpy.parameter_client.Parameter('upper_bound', value=self.upper_bound.tolist())
-                future = parameter_client.set_parameters([lower_param, upper_param])
+                lower_param = Parameter('lower_bound', value=self.lower_bound.tolist())
+                upper_param = Parameter('upper_bound', value=self.upper_bound.tolist())
+                future = self.parameter_client.set_parameters([lower_param, upper_param])
                 rclpy.spin_until_future_complete(self, future)
                 
                 if future.result() is not None:

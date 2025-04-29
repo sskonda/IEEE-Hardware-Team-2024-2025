@@ -1,7 +1,8 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
-import rclpy.parameter
+from rcl_interfaces.msg import SetParametersResult
+from rclpy.parameter import Parameter
 from sensor_msgs.msg import CameraInfo, Image
 from geometry_msgs.msg import PointStamped, PoseStamped, PoseArray, Pose
 from tf2_ros import Buffer, TransformListener
@@ -44,13 +45,14 @@ class ObjectDetection(Node):
     
     def parameter_callback(self, params):
         for param in params:
-            if param.name == 'lower_bound':
+            if param.name == 'lower_bound' and param.type_ == Parameter.Type.INTEGER_ARRAY:
                 self.lower_bound = np.array(param.value, dtype=np.uint8)
                 self.get_logger().info(f"Updated lower_bound to {self.lower_bound.tolist()}")
-            elif param.name == 'upper_bound':
+            elif param.name == 'upper_bound' and param.type_ == Parameter.Type.INTEGER_ARRAY:
                 self.upper_bound = np.array(param.value, dtype=np.uint8)
                 self.get_logger().info(f"Updated upper_bound to {self.upper_bound.tolist()}")
-        return rclpy.parameter.ParameterEventHandler().set_parameters_result(successful=True)
+
+        return SetParametersResult(successful=True)
 
     # intrinsics 
     def camera_info_callback(self, msg: CameraInfo):

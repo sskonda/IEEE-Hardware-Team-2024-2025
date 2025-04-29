@@ -22,7 +22,7 @@ class DriveToPath(Node):
 
         self.timer = self.create_timer(0.005, self.control_loop)
 
-        self.path_sub = self.create_subscription(PoseArray, '/ordered_path', self.path_callback, qos_profile_best_available)
+        self.path_sub = self.create_subscription(PoseArray, '/ordered_path', self.path_callback, qos_profile_sensor_data)
         self.filtered_odom = self.create_subscription(Odometry, '/filtered_odom', self.filtered_odom_callback, qos_profile_sensor_data)
 
         self.current_x = None
